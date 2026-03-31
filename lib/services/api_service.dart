@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 import '../models/asset.dart';
+import '../models/category.dart';
+import '../models/status.dart';
 import '../models/user.dart';
 import 'api_config.dart';
 import 'token_storage.dart';
@@ -85,15 +87,15 @@ class ApiService {
   // ── Assets ──────────────────────────────────────────
 
   Future<List<Asset>> getAssets({
-    String? status,
-    String? category,
+    String? statusId,
+    String? categoryId,
     String? search,
     String? sort,
     String? order,
   }) async {
     final params = <String, dynamic>{};
-    if (status != null) params['status'] = status;
-    if (category != null) params['category'] = category;
+    if (statusId != null) params['status_id'] = statusId;
+    if (categoryId != null) params['category_id'] = categoryId;
     if (search != null && search.isNotEmpty) params['search'] = search;
     if (sort != null) params['sort'] = sort;
     if (order != null) params['order'] = order;
@@ -144,5 +146,49 @@ class ApiService {
     final response = await _dio.get('/users/$id');
     final data = response.data as Map<String, dynamic>;
     return AppUser.fromJson(data['user'] as Map<String, dynamic>);
+  }
+
+  // ── Categories ──────────────────────────────────────
+
+  Future<List<Category>> getCategories() async {
+    final response = await _dio.get('/categories');
+    final list = response.data as List;
+    return list.map((j) => Category.fromJson(j as Map<String, dynamic>)).toList();
+  }
+
+  Future<Category> createCategory(Category category) async {
+    final response = await _dio.post('/categories', data: category.toJson());
+    return Category.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<Category> updateCategory(Category category) async {
+    final response = await _dio.put('/categories/${category.id}', data: category.toJson());
+    return Category.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<void> deleteCategory(String id) async {
+    await _dio.delete('/categories/$id');
+  }
+
+  // ── Statuses ────────────────────────────────────────
+
+  Future<List<Status>> getStatuses() async {
+    final response = await _dio.get('/statuses');
+    final list = response.data as List;
+    return list.map((j) => Status.fromJson(j as Map<String, dynamic>)).toList();
+  }
+
+  Future<Status> createStatus(Status status) async {
+    final response = await _dio.post('/statuses', data: status.toJson());
+    return Status.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<Status> updateStatus(Status status) async {
+    final response = await _dio.put('/statuses/${status.id}', data: status.toJson());
+    return Status.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<void> deleteStatus(String id) async {
+    await _dio.delete('/statuses/$id');
   }
 }

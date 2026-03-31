@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/asset.dart';
 import '../providers/asset_provider.dart';
 import '../widgets/asset_card.dart';
+import '../providers/status_provider.dart';
 import '../widgets/staggered_list_item.dart';
 
 class AssetsListScreen extends StatelessWidget {
@@ -12,6 +13,7 @@ class AssetsListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final assetProvider = context.watch<AssetProvider>();
+    final statProvider = context.watch<StatusProvider>();
     final assets = assetProvider.filteredAssets;
     final colors = Theme.of(context).colorScheme;
 
@@ -51,14 +53,14 @@ class AssetsListScreen extends StatelessWidget {
                   onSelected: (_) => assetProvider.setStatusFilter(null),
                 ),
                 const SizedBox(width: 8),
-                ...AssetStatus.values.map((status) {
+                ...statProvider.statuses.map((status) {
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: FilterChip(
-                      label: Text(status.name[0].toUpperCase() + status.name.substring(1)),
-                      selected: assetProvider.statusFilter == status,
+                      label: Text(status.name),
+                      selected: assetProvider.statusFilter == status.id,
                       onSelected: (_) => assetProvider.setStatusFilter(
-                        assetProvider.statusFilter == status ? null : status,
+                        assetProvider.statusFilter == status.id ? null : status.id,
                       ),
                     ),
                   );

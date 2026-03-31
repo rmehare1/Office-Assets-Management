@@ -7,6 +7,8 @@ import 'providers/auth_provider.dart';
 import 'providers/asset_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/user_provider.dart';
+import 'providers/category_provider.dart';
+import 'providers/status_provider.dart';
 import 'router/app_router.dart';
 import 'screens/splash_screen.dart';
 
@@ -20,6 +22,8 @@ void main() {
         ChangeNotifierProvider(create: (_) => AssetProvider(apiService)),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider(apiService)),
+        ChangeNotifierProvider(create: (_) => CategoryProvider(apiService)),
+        ChangeNotifierProvider(create: (_) => StatusProvider(apiService)),
       ],
       child: const OfficeAssetsApp(),
     ),

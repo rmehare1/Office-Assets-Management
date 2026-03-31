@@ -110,13 +110,18 @@ class _LoginScreenState extends State<LoginScreen>
     final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
     final isLoading = context.watch<AuthProvider>().isLoading;
+    final isDesktop = MediaQuery.of(context).size.width >= 600;
 
     return Scaffold(
       body: SafeArea(
         child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(32),
-            child: AnimatedBuilder(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: isDesktop ? 400 : double.infinity,
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(32),
+              child: AnimatedBuilder(
               animation: _animController,
               builder: (context, child) {
                 return Form(
@@ -267,6 +272,7 @@ class _LoginScreenState extends State<LoginScreen>
                 );
               },
             ),
+          ),
           ),
         ),
       ),

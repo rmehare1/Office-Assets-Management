@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../models/asset.dart';
 import '../providers/asset_provider.dart';
+import '../providers/category_provider.dart';
+import '../providers/status_provider.dart';
 import '../providers/user_provider.dart';
 import '../services/api_exception.dart';
 
@@ -24,8 +26,11 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
   late TextEditingController _locationController;
   late TextEditingController _priceController;
   late TextEditingController _notesController;
-  AssetCategory _category = AssetCategory.laptop;
-  AssetStatus _status = AssetStatus.available;
+  
+  String? _categoryId;
+  String? _categoryName;
+  String? _statusId;
+  String? _statusName;
   String? _assignedToUserId;
   DateTime _purchaseDate = DateTime.now();
   bool _isSubmitting = false;
@@ -47,29 +52,34 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
     _notesController = TextEditingController(text: asset?.notes ?? '');
 
     if (asset != null) {
-      _category = asset.category;
-      _status = asset.status;
+      _categoryId = asset.categoryId;
+      _categoryName = asset.categoryName;
+      _statusId = asset.statusId;
+      _statusName = asset.statusName;
       _purchaseDate = asset.purchaseDate;
-      if (asset.status == AssetStatus.assigned && asset.assignedTo.isNotEmpty) {
+      if (asset.statusName.toLowerCase() == 'assigned' && asset.assignedTo.isNotEmpty) {
         _assignedToUserId = asset.assignedTo;
       }
     }
 
-    // Load users for the assign-to dropdown
     final userProvider = context.read<UserProvider>();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (context.read<CategoryProvider>().categories.isEmpty) {
+        context.read<CategoryProvider>().loadCategories();
+      }
+      if (context.read<StatusProvider>().statuses.isEmpty) {
+        context.read<StatusProvider>().loadStatuses();
+      }
       userProvider.loadUsers().then((_) {
         if (!mounted) return;
-        // If editing and assignedTo is a name (from assigned_to_name), resolve to user ID
         if (asset != null &&
-            asset.status == AssetStatus.assigned &&
+            asset.statusName.toLowerCase() == 'assigned' &&
             asset.assignedTo.isNotEmpty) {
           final users = userProvider.users;
           final matchById = users.where((u) => u.id == asset.assignedTo);
           if (matchById.isNotEmpty) {
             setState(() => _assignedToUserId = matchById.first.id);
           } else {
-            // Try matching by name (API returns assigned_to_name)
             final matchByName =
                 users.where((u) => u.name == asset.assignedTo);
             if (matchByName.isNotEmpty) {
@@ -105,22 +115,28 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_categoryId == null || _statusId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select category and status')),
+      );
+      return;
+    }
 
     setState(() => _isSubmitting = true);
 
     final asset = Asset(
       id: widget.assetId ?? '',
       name: _nameController.text.trim(),
-      category: _category,
-      status: _status,
-      assignedTo: _status == AssetStatus.assigned ? (_assignedToUserId ?? '') : '',
+      categoryId: _categoryId!,
+      categoryName: _categoryName ?? '',
+      statusId: _statusId!,
+      statusName: _statusName ?? '',
+      assignedTo: (_statusName?.toLowerCase() == 'assigned') ? (_assignedToUserId ?? '') : '',
       serialNumber: _serialController.text.trim(),
       location: _locationController.text.trim(),
       purchaseDate: _purchaseDate,
       purchasePrice: double.parse(_priceController.text.trim()),
-      notes: _notesController.text.trim().isEmpty
-          ? null
-          : _notesController.text.trim(),
+      notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
     );
 
     try {
@@ -133,9 +149,7 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
       if (mounted) context.pop();
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -147,11 +161,16 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
     final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
 
+    final catProvider = context.watch<CategoryProvider>();
+    final statProvider = context.watch<StatusProvider>();
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.isEditing ? 'Edit Asset' : 'Add Asset'),
       ),
-      body: Form(
+      body: (catProvider.isLoading || statProvider.isLoading) 
+      ? const Center(child: CircularProgressIndicator()) 
+      : Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -162,8 +181,7 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
                 labelText: 'Name',
                 prefixIcon: Icon(Icons.label_outlined),
               ),
-              validator: (v) =>
-                  v == null || v.trim().isEmpty ? 'Required' : null,
+              validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -172,48 +190,56 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
                 labelText: 'Serial Number',
                 prefixIcon: Icon(Icons.qr_code),
               ),
-              validator: (v) =>
-                  v == null || v.trim().isEmpty ? 'Required' : null,
+              validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
             ),
             const SizedBox(height: 16),
-            DropdownButtonFormField<AssetCategory>(
-              value: _category,
+            DropdownButtonFormField<String>(
+              value: _categoryId,
               decoration: const InputDecoration(
                 labelText: 'Category',
                 prefixIcon: Icon(Icons.category_outlined),
               ),
-              items: AssetCategory.values.map((c) {
+              items: catProvider.categories.map((c) {
                 return DropdownMenuItem(
-                  value: c,
-                  child: Text(c.name[0].toUpperCase() + c.name.substring(1)),
+                  value: c.id,
+                  child: Text(c.name),
                 );
               }).toList(),
-              onChanged: (v) => setState(() => _category = v!),
+              validator: (v) => v == null ? 'Required' : null,
+              onChanged: (v) {
+                if (v == null) return;
+                setState(() {
+                  _categoryId = v;
+                  _categoryName = catProvider.categories.firstWhere((c) => c.id == v).name;
+                });
+              },
             ),
             const SizedBox(height: 16),
-            DropdownButtonFormField<AssetStatus>(
-              value: _status,
+            DropdownButtonFormField<String>(
+              value: _statusId,
               decoration: const InputDecoration(
                 labelText: 'Status',
                 prefixIcon: Icon(Icons.info_outlined),
               ),
-              items: AssetStatus.values.map((s) {
+              items: statProvider.statuses.map((s) {
                 return DropdownMenuItem(
-                  value: s,
-                  child: Text(s.name[0].toUpperCase() + s.name.substring(1)),
+                  value: s.id,
+                  child: Text(s.name),
                 );
               }).toList(),
+              validator: (v) => v == null ? 'Required' : null,
               onChanged: (v) {
+                if (v == null) return;
                 setState(() {
-                  _status = v!;
-                  if (_status != AssetStatus.assigned) {
+                  _statusId = v;
+                  _statusName = statProvider.statuses.firstWhere((s) => s.id == v).name;
+                  if (_statusName?.toLowerCase() != 'assigned') {
                     _assignedToUserId = null;
                   }
                 });
               },
             ),
-            // Conditional Assign-To dropdown
-            if (_status == AssetStatus.assigned) ...[
+            if (_statusName?.toLowerCase() == 'assigned') ...[
               const SizedBox(height: 16),
               Consumer<UserProvider>(
                 builder: (context, userProvider, _) {
@@ -234,8 +260,7 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
                       );
                     }).toList(),
                     validator: (v) {
-                      if (_status == AssetStatus.assigned &&
-                          (v == null || v.isEmpty)) {
+                      if (_statusName?.toLowerCase() == 'assigned' && (v == null || v.isEmpty)) {
                         return 'Please select a user';
                       }
                       return null;
@@ -252,8 +277,7 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
                 labelText: 'Location',
                 prefixIcon: Icon(Icons.location_on_outlined),
               ),
-              validator: (v) =>
-                  v == null || v.trim().isEmpty ? 'Required' : null,
+              validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
             ),
             const SizedBox(height: 16),
             InkWell(
@@ -276,9 +300,7 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
                 labelText: 'Purchase Price',
                 prefixIcon: Icon(Icons.currency_rupee),
               ),
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               validator: (v) {
                 if (v == null || v.trim().isEmpty) return 'Required';
                 final n = double.tryParse(v.trim());

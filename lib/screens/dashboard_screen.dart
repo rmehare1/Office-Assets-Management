@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../models/asset.dart';
+import '../models/category.dart';
 import '../providers/asset_provider.dart';
+import '../providers/status_provider.dart';
+import '../providers/category_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/asset_card.dart';
 import '../widgets/stat_card.dart';
@@ -36,25 +39,36 @@ class _DashboardScreenState extends State<DashboardScreen>
       vsync: this,
     );
 
-    _statScales = List.generate(4, (i) {
+    // Create a pool of animations for dynamic cards
+    _statScales = List.generate(10, (i) {
       return Tween<double>(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(
           parent: _statsController,
-          curve: Interval(i * 0.15, 0.4 + i * 0.15, curve: Curves.easeOutBack),
+          curve: Interval(i * 0.1, 0.4 + i * 0.1, curve: Curves.easeOutBack),
         ),
       );
     });
 
-    _statOpacities = List.generate(4, (i) {
+    _statOpacities = List.generate(10, (i) {
       return Tween<double>(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(
           parent: _statsController,
-          curve: Interval(i * 0.15, 0.3 + i * 0.15, curve: Curves.easeIn),
+          curve: Interval(i * 0.1, 0.3 + i * 0.1, curve: Curves.easeIn),
         ),
       );
     });
 
     _statsController.forward();
+
+    // Ensure providers are loaded
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (context.read<CategoryProvider>().categories.isEmpty) {
+        context.read<CategoryProvider>().loadCategories();
+      }
+      if (context.read<StatusProvider>().statuses.isEmpty) {
+        context.read<StatusProvider>().loadStatuses();
+      }
+    });
 
     _checkTutorial();
   }
@@ -73,24 +87,38 @@ class _DashboardScreenState extends State<DashboardScreen>
     super.dispose();
   }
 
-  void _navigateWithFilter(BuildContext context, AssetStatus? status) {
-    context.read<AssetProvider>().setStatusFilter(status);
+  void _navigateWithFilter(BuildContext context, String? statusId) {
+    context.read<AssetProvider>().setStatusFilter(statusId);
     context.go('/assets');
   }
 
   Widget _buildStatCard(int index, Widget child) {
+    final i = index % _statScales.length;
     return AnimatedBuilder(
       animation: _statsController,
       builder: (context, _) {
         return Opacity(
-          opacity: _statOpacities[index].value,
-          child: Transform.scale(
-            scale: _statScales[index].value,
-            child: child,
-          ),
+          opacity: _statOpacities[i].value,
+          child: Transform.scale(scale: _statScales[i].value, child: child),
         );
       },
     );
+  }
+
+  Color _parseColor(String? colorStr) {
+    if (colorStr != null && colorStr.startsWith('0x')) {
+      return Color(int.parse(colorStr));
+    }
+    return Colors.grey;
+  }
+  
+  IconData _parseIcon(String? iconStr) {
+    if (iconStr == 'laptop') return Icons.computer;
+    if (iconStr == 'monitor') return Icons.monitor;
+    if (iconStr == 'phone') return Icons.smartphone;
+    if (iconStr == 'furniture') return Icons.chair;
+    if (iconStr == 'accessory') return Icons.keyboard;
+    return Icons.devices;
   }
 
   @override
@@ -98,15 +126,22 @@ class _DashboardScreenState extends State<DashboardScreen>
     final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
     final assetProvider = context.watch<AssetProvider>();
+    final statProvider = context.watch<StatusProvider>();
+    final catProvider = context.watch<CategoryProvider>();
+    final isDesktop = MediaQuery.of(context).size.width >= 600;
 
     return Stack(
       children: [
         Scaffold(
           appBar: AppBar(title: const Text('Dashboard')),
-          body: assetProvider.isLoading
+          body: (assetProvider.isLoading || statProvider.isLoading || catProvider.isLoading)
               ? const Center(child: CircularProgressIndicator())
               : RefreshIndicator(
-                  onRefresh: assetProvider.loadAssets,
+                  onRefresh: () async {
+                    await assetProvider.loadAssets();
+                    await statProvider.loadStatuses();
+                    await catProvider.loadCategories();
+                  },
                   child: ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
@@ -119,7 +154,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                           suffixIcon: assetProvider.searchQuery.isNotEmpty
                               ? IconButton(
                                   icon: const Icon(Icons.clear),
-                                  onPressed: () => assetProvider.setSearchQuery(''),
+                                  onPressed: () =>
+                                      assetProvider.setSearchQuery(''),
                                 )
                               : null,
                         ),
@@ -128,12 +164,12 @@ class _DashboardScreenState extends State<DashboardScreen>
 
                       GridView.count(
                         key: _statsKey,
-                        crossAxisCount: 2,
+                        crossAxisCount: isDesktop ? 4 : 2,
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         mainAxisSpacing: 12,
                         crossAxisSpacing: 12,
-                        childAspectRatio: 1.4,
+                        childAspectRatio: isDesktop ? 3.0 : 1.4,
                         children: [
                           _buildStatCard(
                             0,
@@ -147,49 +183,32 @@ class _DashboardScreenState extends State<DashboardScreen>
                               ),
                             ),
                           ),
-                          _buildStatCard(
-                            1,
-                            GestureDetector(
-                              onTap: () => _navigateWithFilter(context, AssetStatus.available),
-                              child: StatCard(
-                                title: 'Available',
-                                value: '${assetProvider.availableCount}',
-                                icon: Icons.check_circle_outline,
-                                color: AppTheme.accentColor,
+                          ...List.generate(statProvider.statuses.length, (index) {
+                            final status = statProvider.statuses[index];
+                            final count = assetProvider.assets.where((a) => a.statusId == status.id).length;
+                            return _buildStatCard(
+                              index + 1,
+                              GestureDetector(
+                                onTap: () => _navigateWithFilter(context, status.id),
+                                child: StatCard(
+                                  title: status.name,
+                                  value: '$count',
+                                  icon: Icons.info_outline,
+                                  color: _parseColor(status.color),
+                                ),
                               ),
-                            ),
-                          ),
-                          _buildStatCard(
-                            2,
-                            GestureDetector(
-                              onTap: () => _navigateWithFilter(context, AssetStatus.assigned),
-                              child: StatCard(
-                                title: 'Assigned',
-                                value: '${assetProvider.assignedCount}',
-                                icon: Icons.person_outline,
-                                color: colors.secondary,
-                              ),
-                            ),
-                          ),
-                          _buildStatCard(
-                            3,
-                            GestureDetector(
-                              onTap: () => _navigateWithFilter(context, AssetStatus.maintenance),
-                              child: StatCard(
-                                title: 'Maintenance',
-                                value: '${assetProvider.maintenanceCount}',
-                                icon: Icons.build_outlined,
-                                color: AppTheme.warningColor,
-                              ),
-                            ),
-                          ),
+                            );
+                          }),
                         ],
                       ),
                       const SizedBox(height: 24),
 
                       Text(
                         'Categories',
-                        style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: colors.onSurface),
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: colors.onSurface,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       if (assetProvider.assets.isNotEmpty)
@@ -198,12 +217,19 @@ class _DashboardScreenState extends State<DashboardScreen>
                           child: ListView(
                             scrollDirection: Axis.horizontal,
                             children: assetProvider.categoryBreakdown.entries.map((entry) {
-                              final sampleAsset = assetProvider.assets.firstWhere((a) => a.category == entry.key);
+                              final cat = catProvider.categories.firstWhere(
+                                (c) => c.name == entry.key, 
+                                orElse: () => Category(id: '', name: entry.key, icon: 'devices', color: '0xFF9E9E9E')
+                              );
                               return Padding(
                                 padding: const EdgeInsets.only(right: 8),
                                 child: Chip(
-                                  avatar: Icon(sampleAsset.categoryIcon, size: 18),
-                                  label: Text('${sampleAsset.categoryLabel}: ${entry.value}'),
+                                  avatar: Icon(
+                                    _parseIcon(cat.icon),
+                                    size: 18,
+                                    color: _parseColor(cat.color),
+                                  ),
+                                  label: Text('${entry.key}: ${entry.value}'),
                                 ),
                               );
                             }).toList(),
@@ -215,9 +241,20 @@ class _DashboardScreenState extends State<DashboardScreen>
                         key: _assetsKey,
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Recent Assets', style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: colors.onSurface)),
+                          Text(
+                            'Recent Assets',
+                            style: textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: colors.onSurface,
+                            ),
+                          ),
                           if (assetProvider.searchQuery.isNotEmpty)
-                            Text('${assetProvider.filteredAssets.length} results', style: textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
+                            Text(
+                              '${assetProvider.filteredAssets.length} results',
+                              style: textTheme.bodySmall?.copyWith(
+                                color: colors.onSurfaceVariant,
+                              ),
+                            ),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -226,9 +263,18 @@ class _DashboardScreenState extends State<DashboardScreen>
                           padding: const EdgeInsets.symmetric(vertical: 32),
                           child: Column(
                             children: [
-                              Icon(Icons.search_off, size: 48, color: colors.onSurfaceVariant),
+                              Icon(
+                                Icons.search_off,
+                                size: 48,
+                                color: colors.onSurfaceVariant,
+                              ),
                               const SizedBox(height: 8),
-                              Text('No assets match your search', style: textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant)),
+                              Text(
+                                'No assets match your search',
+                                style: textTheme.bodyMedium?.copyWith(
+                                  color: colors.onSurfaceVariant,
+                                ),
+                              ),
                             ],
                           ),
                         )
@@ -241,7 +287,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                               padding: const EdgeInsets.only(bottom: 8),
                               child: AssetCard(
                                 asset: entry.value,
-                                onTap: () => context.go('/assets/${entry.value.id}'),
+                                onTap: () =>
+                                    context.go('/assets/${entry.value.id}'),
                               ),
                             ),
                           ),
@@ -257,19 +304,22 @@ class _DashboardScreenState extends State<DashboardScreen>
               TutorialStep(
                 targetKey: _searchKey,
                 title: 'Search Assets',
-                description: 'Quickly find any asset by name, category, location, or serial number.',
+                description:
+                    'Quickly find any asset by name, category, location, or serial number.',
                 icon: Icons.search,
               ),
               TutorialStep(
                 targetKey: _statsKey,
                 title: 'Asset Overview',
-                description: 'Tap any stat card to jump to a filtered view of those assets.',
+                description:
+                    'Tap any stat card to jump to a filtered view of those assets.',
                 icon: Icons.dashboard,
               ),
               TutorialStep(
                 targetKey: _assetsKey,
                 title: 'Recent Assets',
-                description: 'Browse your latest assets here. Tap any card to see full details.',
+                description:
+                    'Browse your latest assets here. Tap any card to see full details.',
                 icon: Icons.inventory_2,
               ),
             ],

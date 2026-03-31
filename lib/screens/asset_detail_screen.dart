@@ -97,7 +97,7 @@ class AssetDetailScreen extends StatelessWidget {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
-                  StatusBadge(status: asset.status, fontSize: 14),
+                  StatusBadge(statusName: asset.statusName, statusColorStr: asset.statusColorStr, fontSize: 14),
                 ],
               ),
             ),

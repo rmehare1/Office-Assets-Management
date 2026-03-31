@@ -60,7 +60,7 @@ class AssetCard extends StatelessWidget {
                   ],
                 ),
               ),
-              StatusBadge(status: asset.status),
+              StatusBadge(statusName: asset.statusName, statusColorStr: asset.statusColorStr),
             ],
           ),
         ),

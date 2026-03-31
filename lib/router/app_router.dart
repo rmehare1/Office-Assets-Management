@@ -8,6 +8,8 @@ import '../screens/assets_list_screen.dart';
 import '../screens/asset_detail_screen.dart';
 import '../screens/asset_form_screen.dart';
 import '../screens/profile_screen.dart';
+import '../screens/masters/category_list_screen.dart';
+import '../screens/masters/status_list_screen.dart';
 
 CustomTransitionPage<void> _fadeSlideTransition(
   GoRouterState state,
@@ -132,6 +134,16 @@ GoRouter appRouter(AuthProvider authProvider) {
             path: '/profile',
             pageBuilder: (context, state) =>
                 _fadeSlideTransition(state, const ProfileScreen()),
+          ),
+          GoRoute(
+            path: '/categories',
+            pageBuilder: (context, state) =>
+                _fadeSlideTransition(state, const CategoryListScreen()),
+          ),
+          GoRoute(
+            path: '/statuses',
+            pageBuilder: (context, state) =>
+                _fadeSlideTransition(state, const StatusListScreen()),
           ),
         ],
       ),

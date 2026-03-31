@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -121,6 +122,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   secondary: const Icon(Icons.dark_mode_outlined),
                   value: themeProvider.isDarkMode,
                   onChanged: (_) => themeProvider.toggleTheme(),
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  title: const Text('Manage Categories'),
+                  subtitle: const Text('Add, edit, or remove asset categories'),
+                  leading: const Icon(Icons.category_outlined),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.go('/categories'),
+                ),
+                ListTile(
+                  title: const Text('Manage Statuses'),
+                  subtitle: const Text('Add, edit, or remove asset statuses'),
+                  leading: const Icon(Icons.info_outlined),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.go('/statuses'),
                 ),
                 const SizedBox(height: 8),
               ],

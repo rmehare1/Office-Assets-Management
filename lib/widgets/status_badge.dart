@@ -1,26 +1,37 @@
 import 'package:flutter/material.dart';
-import '../models/asset.dart';
 
 class StatusBadge extends StatelessWidget {
-  final AssetStatus status;
+  final String statusName;
+  final String? statusColorStr;
   final double fontSize;
 
   const StatusBadge({
     super.key,
-    required this.status,
+    required this.statusName,
+    this.statusColorStr,
     this.fontSize = 12,
   });
 
   Color get _color {
-    switch (status) {
-      case AssetStatus.available:
+    if (statusColorStr != null && statusColorStr!.startsWith('0x')) {
+      try {
+        return Color(int.parse(statusColorStr!));
+      } catch (e) {
         return const Color(0xFF27AE60);
-      case AssetStatus.assigned:
+      }
+    }
+    // Simple fallback colors for default statuses if color not defined in DB
+    switch (statusName.toLowerCase()) {
+      case 'available':
+        return const Color(0xFF27AE60);
+      case 'assigned':
         return const Color(0xFF4A90D9);
-      case AssetStatus.maintenance:
+      case 'maintenance':
         return const Color(0xFFE67E22);
-      case AssetStatus.retired:
+      case 'retired':
         return const Color(0xFFE74C3C);
+      default:
+        return Colors.grey;
     }
   }
 
@@ -35,7 +46,7 @@ class StatusBadge extends StatelessWidget {
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
-        status.name[0].toUpperCase() + status.name.substring(1),
+        statusName.isEmpty ? 'Unknown' : statusName[0].toUpperCase() + statusName.substring(1),
         style: TextStyle(
           color: color,
           fontSize: fontSize,

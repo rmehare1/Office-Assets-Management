@@ -1,28 +1,14 @@
 import 'package:flutter/material.dart';
 
-enum AssetStatus { available, assigned, maintenance, retired }
-
-enum AssetCategory { laptop, monitor, phone, furniture, accessory, other }
-
-AssetStatus assetStatusFromString(String s) {
-  return AssetStatus.values.firstWhere(
-    (e) => e.name == s,
-    orElse: () => AssetStatus.available,
-  );
-}
-
-AssetCategory assetCategoryFromString(String s) {
-  return AssetCategory.values.firstWhere(
-    (e) => e.name == s,
-    orElse: () => AssetCategory.other,
-  );
-}
-
 class Asset {
   final String id;
   final String name;
-  final AssetCategory category;
-  final AssetStatus status;
+  final String categoryId;
+  final String categoryName;
+  final String? categoryIconStr;
+  final String statusId;
+  final String statusName;
+  final String? statusColorStr;
   final String assignedTo;
   final String serialNumber;
   final String location;
@@ -34,8 +20,12 @@ class Asset {
   const Asset({
     required this.id,
     required this.name,
-    required this.category,
-    required this.status,
+    required this.categoryId,
+    required this.categoryName,
+    this.categoryIconStr,
+    required this.statusId,
+    required this.statusName,
+    this.statusColorStr,
     required this.assignedTo,
     required this.serialNumber,
     required this.location,
@@ -49,8 +39,12 @@ class Asset {
     return Asset(
       id: json['id'] as String,
       name: json['name'] as String,
-      category: assetCategoryFromString(json['category'] as String),
-      status: assetStatusFromString(json['status'] as String),
+      categoryId: json['category_id'] as String? ?? '',
+      categoryName: json['category'] as String? ?? 'Unknown',
+      categoryIconStr: json['category_icon'] as String?,
+      statusId: json['status_id'] as String? ?? '',
+      statusName: json['status'] as String? ?? 'Unknown',
+      statusColorStr: json['status_color'] as String?,
       assignedTo: json['assigned_to_name'] as String? ?? json['assigned_to'] as String? ?? '',
       serialNumber: json['serial_number'] as String,
       location: json['location'] as String,
@@ -65,8 +59,8 @@ class Asset {
     return {
       'id': id,
       'name': name,
-      'category': category.name,
-      'status': status.name,
+      'category_id': categoryId,
+      'status_id': statusId,
       'assigned_to': assignedTo.isEmpty ? null : assignedTo,
       'serial_number': serialNumber,
       'location': location,
@@ -80,8 +74,12 @@ class Asset {
   Asset copyWith({
     String? id,
     String? name,
-    AssetCategory? category,
-    AssetStatus? status,
+    String? categoryId,
+    String? categoryName,
+    String? categoryIconStr,
+    String? statusId,
+    String? statusName,
+    String? statusColorStr,
     String? assignedTo,
     String? serialNumber,
     String? location,
@@ -93,8 +91,12 @@ class Asset {
     return Asset(
       id: id ?? this.id,
       name: name ?? this.name,
-      category: category ?? this.category,
-      status: status ?? this.status,
+      categoryId: categoryId ?? this.categoryId,
+      categoryName: categoryName ?? this.categoryName,
+      categoryIconStr: categoryIconStr ?? this.categoryIconStr,
+      statusId: statusId ?? this.statusId,
+      statusName: statusName ?? this.statusName,
+      statusColorStr: statusColorStr ?? this.statusColorStr,
       assignedTo: assignedTo ?? this.assignedTo,
       serialNumber: serialNumber ?? this.serialNumber,
       location: location ?? this.location,
@@ -106,62 +108,27 @@ class Asset {
   }
 
   IconData get categoryIcon {
-    switch (category) {
-      case AssetCategory.laptop:
-        return Icons.laptop_mac;
-      case AssetCategory.monitor:
-        return Icons.monitor;
-      case AssetCategory.phone:
-        return Icons.phone_android;
-      case AssetCategory.furniture:
-        return Icons.chair;
-      case AssetCategory.accessory:
-        return Icons.headphones;
-      case AssetCategory.other:
-        return Icons.devices_other;
+    switch (categoryIconStr) {
+      case 'laptop_mac': return Icons.laptop_mac;
+      case 'monitor': return Icons.monitor;
+      case 'phone_android': return Icons.phone_android;
+      case 'chair': return Icons.chair;
+      case 'headphones': return Icons.headphones;
+      default: return Icons.devices_other;
     }
   }
 
   Color get statusColor {
-    switch (status) {
-      case AssetStatus.available:
-        return const Color(0xFF27AE60);
-      case AssetStatus.assigned:
-        return const Color(0xFF4A90D9);
-      case AssetStatus.maintenance:
-        return const Color(0xFFE67E22);
-      case AssetStatus.retired:
-        return const Color(0xFFE74C3C);
+    if (statusColorStr != null && statusColorStr!.startsWith('0x')) {
+      try {
+        return Color(int.parse(statusColorStr!));
+      } catch (e) {
+        return Colors.grey;
+      }
     }
+    return Colors.grey;
   }
 
-  String get statusLabel {
-    switch (status) {
-      case AssetStatus.available:
-        return 'Available';
-      case AssetStatus.assigned:
-        return 'Assigned';
-      case AssetStatus.maintenance:
-        return 'Maintenance';
-      case AssetStatus.retired:
-        return 'Retired';
-    }
-  }
-
-  String get categoryLabel {
-    switch (category) {
-      case AssetCategory.laptop:
-        return 'Laptop';
-      case AssetCategory.monitor:
-        return 'Monitor';
-      case AssetCategory.phone:
-        return 'Phone';
-      case AssetCategory.furniture:
-        return 'Furniture';
-      case AssetCategory.accessory:
-        return 'Accessory';
-      case AssetCategory.other:
-        return 'Other';
-    }
-  }
+  String get statusLabel => statusName;
+  String get categoryLabel => categoryName;
 }

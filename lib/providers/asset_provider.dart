@@ -10,8 +10,8 @@ class AssetProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   String _searchQuery = '';
-  AssetStatus? _statusFilter;
-  AssetCategory? _categoryFilter;
+  String? _statusFilter;
+  String? _categoryFilter;
   String _sortField = 'name';
   bool _sortAscending = true;
 
@@ -21,17 +21,17 @@ class AssetProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   String get searchQuery => _searchQuery;
-  AssetStatus? get statusFilter => _statusFilter;
-  AssetCategory? get categoryFilter => _categoryFilter;
+  String? get statusFilter => _statusFilter;
+  String? get categoryFilter => _categoryFilter;
 
   List<Asset> get filteredAssets {
     var result = List<Asset>.from(_assets);
 
     if (_statusFilter != null) {
-      result = result.where((a) => a.status == _statusFilter).toList();
+      result = result.where((a) => a.statusId == _statusFilter).toList();
     }
     if (_categoryFilter != null) {
-      result = result.where((a) => a.category == _categoryFilter).toList();
+      result = result.where((a) => a.categoryId == _categoryFilter).toList();
     }
     if (_searchQuery.isNotEmpty) {
       final query = _searchQuery.toLowerCase();
@@ -51,9 +51,9 @@ class AssetProvider extends ChangeNotifier {
         case 'purchase_date':
           cmp = a.purchaseDate.compareTo(b.purchaseDate);
         case 'status':
-          cmp = a.status.index.compareTo(b.status.index);
+          cmp = a.statusName.compareTo(b.statusName);
         case 'category':
-          cmp = a.category.index.compareTo(b.category.index);
+          cmp = a.categoryName.compareTo(b.categoryName);
         default:
           cmp = a.name.toLowerCase().compareTo(b.name.toLowerCase());
       }
@@ -65,16 +65,16 @@ class AssetProvider extends ChangeNotifier {
 
   int get totalAssets => _assets.length;
   int get availableCount =>
-      _assets.where((a) => a.status == AssetStatus.available).length;
+      _assets.where((a) => a.statusName.toLowerCase() == 'available').length;
   int get assignedCount =>
-      _assets.where((a) => a.status == AssetStatus.assigned).length;
+      _assets.where((a) => a.statusName.toLowerCase() == 'assigned').length;
   int get maintenanceCount =>
-      _assets.where((a) => a.status == AssetStatus.maintenance).length;
+      _assets.where((a) => a.statusName.toLowerCase() == 'maintenance').length;
 
-  Map<AssetCategory, int> get categoryBreakdown {
-    final map = <AssetCategory, int>{};
+  Map<String, int> get categoryBreakdown {
+    final map = <String, int>{};
     for (final asset in _assets) {
-      map[asset.category] = (map[asset.category] ?? 0) + 1;
+      map[asset.categoryName] = (map[asset.categoryName] ?? 0) + 1;
     }
     return map;
   }
@@ -147,13 +147,13 @@ class AssetProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setStatusFilter(AssetStatus? status) {
-    _statusFilter = status;
+  void setStatusFilter(String? statusId) {
+    _statusFilter = statusId;
     notifyListeners();
   }
 
-  void setCategoryFilter(AssetCategory? category) {
-    _categoryFilter = category;
+  void setCategoryFilter(String? categoryId) {
+    _categoryFilter = categoryId;
     notifyListeners();
   }
 
