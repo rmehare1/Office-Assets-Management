@@ -8,9 +8,12 @@ import 'providers/asset_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/user_provider.dart';
 import 'providers/category_provider.dart';
+import 'providers/department_provider.dart';
+import 'providers/location_provider.dart';
 import 'providers/status_provider.dart';
-import 'router/app_router.dart';
-import 'screens/splash_screen.dart';
+import 'providers/ticket_provider.dart';
+import 'package:office_assets_app/router/app_router.dart';
+import 'package:office_assets_app/screens/shared/splash_screen.dart';
 
 void main() {
   final apiService = ApiService();
@@ -23,7 +26,10 @@ void main() {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider(apiService)),
         ChangeNotifierProvider(create: (_) => CategoryProvider(apiService)),
+        ChangeNotifierProvider(create: (_) => LocationProvider(apiService)),
+        ChangeNotifierProvider(create: (_) => DepartmentProvider(apiService)),
         ChangeNotifierProvider(create: (_) => StatusProvider(apiService)),
+        ChangeNotifierProvider(create: (_) => TicketProvider(apiService)),
       ],
       child: const OfficeAssetsApp(),
     ),

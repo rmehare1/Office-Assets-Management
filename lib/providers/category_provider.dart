@@ -1,7 +1,8 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import '../models/category.dart';
-import '../services/api_service.dart';
-import '../services/api_exception.dart';
+import 'package:office_assets_app/models/category.dart';
+import 'package:office_assets_app/services/api_service.dart';
+import 'package:office_assets_app/services/api_exception.dart';
 
 class CategoryProvider extends ChangeNotifier {
   final ApiService _apiService;
@@ -16,6 +17,13 @@ class CategoryProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
+  /// Extract ApiException from DioException.error if present.
+  static ApiException? _extractApiException(Object e) {
+    if (e is ApiException) return e;
+    if (e is DioException && e.error is ApiException) return e.error as ApiException;
+    return null;
+  }
+
   Future<void> loadCategories() async {
     _isLoading = true;
     _error = null;
@@ -23,10 +31,12 @@ class CategoryProvider extends ChangeNotifier {
 
     try {
       _categories = await _apiService.getCategories();
-      _isLoading = false;
-      notifyListeners();
     } on ApiException catch (e) {
       _error = e.message;
+    } catch (e) {
+      final apiEx = _extractApiException(e);
+      _error = apiEx?.message ?? 'Failed to load categories.';
+    } finally {
       _isLoading = false;
       notifyListeners();
     }
@@ -40,6 +50,12 @@ class CategoryProvider extends ChangeNotifier {
     } on ApiException catch (e) {
       _error = e.message;
       notifyListeners();
+      rethrow;
+    } catch (e) {
+      final apiEx = _extractApiException(e);
+      _error = apiEx?.message ?? 'Failed to add category.';
+      notifyListeners();
+      if (apiEx != null) throw apiEx;
       rethrow;
     }
   }
@@ -56,6 +72,12 @@ class CategoryProvider extends ChangeNotifier {
       _error = e.message;
       notifyListeners();
       rethrow;
+    } catch (e) {
+      final apiEx = _extractApiException(e);
+      _error = apiEx?.message ?? 'Failed to update category.';
+      notifyListeners();
+      if (apiEx != null) throw apiEx;
+      rethrow;
     }
   }
 
@@ -67,6 +89,12 @@ class CategoryProvider extends ChangeNotifier {
     } on ApiException catch (e) {
       _error = e.message;
       notifyListeners();
+      rethrow;
+    } catch (e) {
+      final apiEx = _extractApiException(e);
+      _error = apiEx?.message ?? 'Failed to delete category.';
+      notifyListeners();
+      if (apiEx != null) throw apiEx;
       rethrow;
     }
   }

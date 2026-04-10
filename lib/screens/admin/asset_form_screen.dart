@@ -1,0 +1,362 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:office_assets_app/models/asset.dart';
+import 'package:office_assets_app/providers/asset_provider.dart';
+import 'package:office_assets_app/providers/category_provider.dart';
+import 'package:office_assets_app/providers/status_provider.dart';
+import 'package:office_assets_app/providers/location_provider.dart';
+import 'package:office_assets_app/providers/user_provider.dart';
+import 'package:office_assets_app/services/api_exception.dart';
+
+class AssetFormScreen extends StatefulWidget {
+  final String? assetId;
+
+  const AssetFormScreen({super.key, this.assetId});
+
+  bool get isEditing => assetId != null;
+
+  @override
+  State<AssetFormScreen> createState() => _AssetFormScreenState();
+}
+
+class _AssetFormScreenState extends State<AssetFormScreen> {
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _nameController;
+  late TextEditingController _serialController;
+  late TextEditingController _priceController;
+  late TextEditingController _notesController;
+
+  String? _categoryId;
+  String? _categoryName;
+  String? _statusId;
+  String? _statusName;
+  String? _assignedToUserId;
+  String? _locationId;
+  String? _locationName;
+  DateTime _purchaseDate = DateTime.now();
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final asset = widget.assetId != null
+        ? context.read<AssetProvider>().getById(widget.assetId!)
+        : null;
+
+    _nameController = TextEditingController(text: asset?.name ?? '');
+    _serialController = TextEditingController(text: asset?.serialNumber ?? '');
+    _priceController = TextEditingController(
+      text: asset != null ? asset.purchasePrice.toStringAsFixed(2) : '',
+    );
+    _notesController = TextEditingController(text: asset?.notes ?? '');
+
+    if (asset != null) {
+      _categoryId = asset.categoryId;
+      _categoryName = asset.categoryName;
+      _statusId = asset.statusId;
+      _statusName = asset.statusName;
+      _purchaseDate = asset.purchaseDate;
+      _locationId = asset.locationId.isNotEmpty ? asset.locationId : null;
+      _locationName = asset.locationName.isNotEmpty ? asset.locationName : null;
+      if (asset.statusName.toLowerCase() == 'assigned' && asset.assignedTo.isNotEmpty) {
+        _assignedToUserId = asset.assignedTo;
+      }
+    }
+
+    final userProvider = context.read<UserProvider>();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (context.read<CategoryProvider>().categories.isEmpty) {
+        context.read<CategoryProvider>().loadCategories();
+      }
+      if (context.read<StatusProvider>().statuses.isEmpty) {
+        context.read<StatusProvider>().loadStatuses();
+      }
+      if (context.read<LocationProvider>().locations.isEmpty) {
+        context.read<LocationProvider>().loadLocations();
+      }
+      userProvider.loadUsers().then((_) {
+        if (!mounted) return;
+        if (asset != null &&
+            asset.statusName.toLowerCase() == 'assigned' &&
+            asset.assignedTo.isNotEmpty) {
+          final users = userProvider.users;
+          final matchById = users.where((u) => u.id == asset.assignedTo);
+          if (matchById.isNotEmpty) {
+            setState(() => _assignedToUserId = matchById.first.id);
+          } else {
+            final matchByName =
+                users.where((u) => u.name == asset.assignedTo);
+            if (matchByName.isNotEmpty) {
+              setState(() => _assignedToUserId = matchByName.first.id);
+            }
+          }
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _serialController.dispose();
+    _priceController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _purchaseDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() => _purchaseDate = picked);
+    }
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_categoryId == null || _statusId == null || _locationId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select category, status, and location')),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    final asset = Asset(
+      id: widget.assetId ?? '',
+      name: _nameController.text.trim(),
+      categoryId: _categoryId!,
+      categoryName: _categoryName ?? '',
+      statusId: _statusId!,
+      statusName: _statusName ?? '',
+      assignedTo: (_statusName?.toLowerCase() == 'assigned') ? (_assignedToUserId ?? '') : '',
+      serialNumber: _serialController.text.trim(),
+      locationId: _locationId!,
+      locationName: _locationName ?? '',
+      purchaseDate: _purchaseDate,
+      purchasePrice: double.parse(_priceController.text.trim()),
+      notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+    );
+
+    try {
+      final provider = context.read<AssetProvider>();
+      if (widget.isEditing) {
+        await provider.updateAsset(asset);
+      } else {
+        await provider.addAsset(asset);
+      }
+      if (mounted) context.pop();
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).colorScheme;
+
+    final catProvider = context.watch<CategoryProvider>();
+    final statProvider = context.watch<StatusProvider>();
+    final locProvider = context.watch<LocationProvider>();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.isEditing ? 'Edit Asset' : 'Add Asset'),
+      ),
+      body: (catProvider.isLoading || statProvider.isLoading || locProvider.isLoading)
+      ? const Center(child: CircularProgressIndicator()) 
+      : Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            TextFormField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: 'Name',
+                prefixIcon: Icon(Icons.label_outlined),
+              ),
+              validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _serialController,
+              decoration: const InputDecoration(
+                labelText: 'Serial Number',
+                prefixIcon: Icon(Icons.qr_code),
+              ),
+              validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              initialValue: _categoryId,
+              decoration: const InputDecoration(
+                labelText: 'Category',
+                prefixIcon: Icon(Icons.category_outlined),
+              ),
+              items: catProvider.categories.map((c) {
+                return DropdownMenuItem(
+                  value: c.id,
+                  child: Text(c.name),
+                );
+              }).toList(),
+              validator: (v) => v == null ? 'Required' : null,
+              onChanged: (v) {
+                if (v == null) return;
+                setState(() {
+                  _categoryId = v;
+                  _categoryName = catProvider.categories.firstWhere((c) => c.id == v).name;
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              initialValue: _statusId,
+              decoration: const InputDecoration(
+                labelText: 'Status',
+                prefixIcon: Icon(Icons.info_outlined),
+              ),
+              items: statProvider.statuses.map((s) {
+                return DropdownMenuItem(
+                  value: s.id,
+                  child: Text(s.name),
+                );
+              }).toList(),
+              validator: (v) => v == null ? 'Required' : null,
+              onChanged: (v) {
+                if (v == null) return;
+                setState(() {
+                  _statusId = v;
+                  _statusName = statProvider.statuses.firstWhere((s) => s.id == v).name;
+                  if (_statusName?.toLowerCase() != 'assigned') {
+                    _assignedToUserId = null;
+                  }
+                });
+              },
+            ),
+            if (_statusName?.toLowerCase() == 'assigned') ...[
+              const SizedBox(height: 16),
+              Consumer<UserProvider>(
+                builder: (context, userProvider, _) {
+                  final users = userProvider.users;
+                  return DropdownButtonFormField<String>(
+                    initialValue: _assignedToUserId,
+                    decoration: const InputDecoration(
+                      labelText: 'Assign To',
+                      prefixIcon: Icon(Icons.person_outlined),
+                    ),
+                    items: users.map((user) {
+                      return DropdownMenuItem<String>(
+                        value: user.id,
+                        child: Text(
+                          '${user.name} (${user.department})',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }).toList(),
+                    validator: (v) {
+                      if (_statusName?.toLowerCase() == 'assigned' && (v == null || v.isEmpty)) {
+                        return 'Please select a user';
+                      }
+                      return null;
+                    },
+                    onChanged: (v) => setState(() => _assignedToUserId = v),
+                  );
+                },
+              ),
+            ],
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              initialValue: _locationId,
+              decoration: const InputDecoration(
+                labelText: 'Location',
+                prefixIcon: Icon(Icons.location_on_outlined),
+              ),
+              items: locProvider.locations.map((l) {
+                return DropdownMenuItem(
+                  value: l.id,
+                  child: Text(l.name),
+                );
+              }).toList(),
+              validator: (v) => v == null ? 'Required' : null,
+              onChanged: (v) {
+                if (v == null) return;
+                setState(() {
+                  _locationId = v;
+                  _locationName = locProvider.locations.firstWhere((l) => l.id == v).name;
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+            InkWell(
+              onTap: _pickDate,
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'Purchase Date',
+                  prefixIcon: Icon(Icons.calendar_today_outlined),
+                ),
+                child: Text(
+                  '${_purchaseDate.month}/${_purchaseDate.day}/${_purchaseDate.year}',
+                  style: textTheme.bodyLarge?.copyWith(color: colors.onSurface),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _priceController,
+              decoration: const InputDecoration(
+                labelText: 'Purchase Price',
+                prefixIcon: Icon(Icons.currency_rupee),
+              ),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'Required';
+                final n = double.tryParse(v.trim());
+                if (n == null || n < 0) return 'Enter a valid price';
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _notesController,
+              decoration: const InputDecoration(
+                labelText: 'Notes',
+                prefixIcon: Icon(Icons.notes),
+              ),
+              maxLines: 3,
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _isSubmitting ? null : _submit,
+                child: _isSubmitting
+                    ? SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: colors.onPrimary,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                    : Text(widget.isEditing ? 'Save Changes' : 'Create Asset'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

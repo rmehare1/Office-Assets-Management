@@ -1,8 +1,11 @@
 import 'package:dio/dio.dart';
-import '../models/asset.dart';
-import '../models/category.dart';
-import '../models/status.dart';
-import '../models/user.dart';
+import 'package:office_assets_app/models/asset.dart';
+import 'package:office_assets_app/models/category.dart';
+import 'package:office_assets_app/models/department.dart';
+import 'package:office_assets_app/models/location.dart';
+import 'package:office_assets_app/models/status.dart';
+import 'package:office_assets_app/models/ticket.dart';
+import 'package:office_assets_app/models/user.dart';
 import 'api_config.dart';
 import 'token_storage.dart';
 import 'interceptors/auth_interceptor.dart';
@@ -92,6 +95,7 @@ class ApiService {
     String? search,
     String? sort,
     String? order,
+    String? assignedToUserId,
   }) async {
     final params = <String, dynamic>{};
     if (statusId != null) params['status_id'] = statusId;
@@ -99,6 +103,7 @@ class ApiService {
     if (search != null && search.isNotEmpty) params['search'] = search;
     if (sort != null) params['sort'] = sort;
     if (order != null) params['order'] = order;
+    if (assignedToUserId != null) params['assigned_to'] = assignedToUserId;
 
     final response = await _dio.get('/assets', queryParameters: params);
     final data = response.data as Map<String, dynamic>;
@@ -148,6 +153,12 @@ class ApiService {
     return AppUser.fromJson(data['user'] as Map<String, dynamic>);
   }
 
+  Future<AppUser> updateUserRole(String id, String role) async {
+    final response = await _dio.put('/users/$id', data: {'role': role});
+    final data = response.data as Map<String, dynamic>;
+    return AppUser.fromJson(data['user'] as Map<String, dynamic>);
+  }
+
   // ── Categories ──────────────────────────────────────
 
   Future<List<Category>> getCategories() async {
@@ -190,5 +201,72 @@ class ApiService {
 
   Future<void> deleteStatus(String id) async {
     await _dio.delete('/statuses/$id');
+  }
+
+  // ── Locations ────────────────────────────────────────
+
+  Future<List<Location>> getLocations() async {
+    final response = await _dio.get('/locations');
+    final list = response.data as List;
+    return list.map((j) => Location.fromJson(j as Map<String, dynamic>)).toList();
+  }
+
+  Future<Location> createLocation(Location location) async {
+    final response = await _dio.post('/locations', data: location.toJson());
+    return Location.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<Location> updateLocation(Location location) async {
+    final response = await _dio.put('/locations/${location.id}', data: location.toJson());
+    return Location.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<void> deleteLocation(String id) async {
+    await _dio.delete('/locations/$id');
+  }
+
+  // ── Departments ──────────────────────────────────────
+
+  Future<List<Department>> getDepartments() async {
+    final response = await _dio.get('/departments');
+    final list = response.data as List;
+    return list.map((j) => Department.fromJson(j as Map<String, dynamic>)).toList();
+  }
+
+  Future<Department> createDepartment(Department department) async {
+    final response = await _dio.post('/departments', data: department.toJson());
+    return Department.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<Department> updateDepartment(Department department) async {
+    final response = await _dio.put('/departments/${department.id}', data: department.toJson());
+    return Department.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<void> deleteDepartment(String id) async {
+    await _dio.delete('/departments/$id');
+  }
+
+  // ── Tickets ──────────────────────────────────────────
+
+  Future<List<Ticket>> getUserTickets() async {
+    final response = await _dio.get('/tickets');
+    final data = response.data as Map<String, dynamic>;
+    final list = data['tickets'] as List;
+    return list.map((j) => Ticket.fromJson(j as Map<String, dynamic>)).toList();
+  }
+
+  Future<Ticket> createTicket({
+    required String type,
+    String? assetId,
+    String? notes,
+  }) async {
+    final response = await _dio.post('/tickets', data: {
+      'type': type,
+      if (assetId != null) 'asset_id': assetId,
+      if (notes != null && notes.isNotEmpty) 'notes': notes,
+    });
+    final data = response.data as Map<String, dynamic>;
+    return Ticket.fromJson(data['ticket'] as Map<String, dynamic>);
   }
 }

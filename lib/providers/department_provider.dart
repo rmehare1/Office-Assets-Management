@@ -1,51 +1,49 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:office_assets_app/models/status.dart';
+import 'package:office_assets_app/models/department.dart';
 import 'package:office_assets_app/services/api_service.dart';
 import 'package:office_assets_app/services/api_exception.dart';
 
-class StatusProvider extends ChangeNotifier {
+class DepartmentProvider extends ChangeNotifier {
   final ApiService _apiService;
 
-  List<Status> _statuses = [];
+  List<Department> _departments = [];
   bool _isLoading = false;
   String? _error;
 
-  StatusProvider(this._apiService);
+  DepartmentProvider(this._apiService);
 
-  List<Status> get statuses => _statuses;
+  List<Department> get departments => _departments;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  /// Extract ApiException from DioException.error if present.
   static ApiException? _extractApiException(Object e) {
     if (e is ApiException) return e;
     if (e is DioException && e.error is ApiException) return e.error as ApiException;
     return null;
   }
 
-  Future<void> loadStatuses() async {
+  Future<void> loadDepartments() async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-
     try {
-      _statuses = await _apiService.getStatuses();
+      _departments = await _apiService.getDepartments();
     } on ApiException catch (e) {
       _error = e.message;
     } catch (e) {
       final apiEx = _extractApiException(e);
-      _error = apiEx?.message ?? 'Failed to load statuses.';
+      _error = apiEx?.message ?? 'Failed to load departments.';
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  Future<void> addStatus(Status status) async {
+  Future<void> addDepartment(Department department) async {
     try {
-      final created = await _apiService.createStatus(status);
-      _statuses.add(created);
+      final created = await _apiService.createDepartment(department);
+      _departments.add(created);
       notifyListeners();
     } on ApiException catch (e) {
       _error = e.message;
@@ -53,19 +51,19 @@ class StatusProvider extends ChangeNotifier {
       rethrow;
     } catch (e) {
       final apiEx = _extractApiException(e);
-      _error = apiEx?.message ?? 'Failed to add status.';
+      _error = apiEx?.message ?? 'Failed to add department.';
       notifyListeners();
       if (apiEx != null) throw apiEx;
       rethrow;
     }
   }
 
-  Future<void> updateStatus(Status status) async {
+  Future<void> updateDepartment(Department department) async {
     try {
-      final updated = await _apiService.updateStatus(status);
-      final index = _statuses.indexWhere((s) => s.id == status.id);
+      final updated = await _apiService.updateDepartment(department);
+      final index = _departments.indexWhere((d) => d.id == department.id);
       if (index >= 0) {
-        _statuses[index] = updated;
+        _departments[index] = updated;
         notifyListeners();
       }
     } on ApiException catch (e) {
@@ -74,17 +72,17 @@ class StatusProvider extends ChangeNotifier {
       rethrow;
     } catch (e) {
       final apiEx = _extractApiException(e);
-      _error = apiEx?.message ?? 'Failed to update status.';
+      _error = apiEx?.message ?? 'Failed to update department.';
       notifyListeners();
       if (apiEx != null) throw apiEx;
       rethrow;
     }
   }
 
-  Future<void> deleteStatus(String id) async {
+  Future<void> deleteDepartment(String id) async {
     try {
-      await _apiService.deleteStatus(id);
-      _statuses.removeWhere((s) => s.id == id);
+      await _apiService.deleteDepartment(id);
+      _departments.removeWhere((d) => d.id == id);
       notifyListeners();
     } on ApiException catch (e) {
       _error = e.message;
@@ -92,7 +90,7 @@ class StatusProvider extends ChangeNotifier {
       rethrow;
     } catch (e) {
       final apiEx = _extractApiException(e);
-      _error = apiEx?.message ?? 'Failed to delete status.';
+      _error = apiEx?.message ?? 'Failed to delete department.';
       notifyListeners();
       if (apiEx != null) throw apiEx;
       rethrow;

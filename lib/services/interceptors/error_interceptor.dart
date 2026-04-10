@@ -6,12 +6,14 @@ class ErrorInterceptor extends Interceptor {
   void onError(DioException err, ErrorInterceptorHandler handler) {
     final response = err.response;
 
+    ApiException apiException;
+
     switch (err.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
       case DioExceptionType.connectionError:
-        throw const NetworkException('Connection timed out. Check your network.');
+        apiException = const NetworkException('Connection timed out. Check your network.');
 
       case DioExceptionType.badResponse:
         final statusCode = response?.statusCode ?? 0;
@@ -20,33 +22,46 @@ class ErrorInterceptor extends Interceptor {
 
         switch (statusCode) {
           case 400:
-            throw ValidationException(
+            apiException = ValidationException(
               message ?? 'Invalid request.',
               400,
               data is Map ? Map<String, dynamic>.from(data) : null,
             );
           case 401:
-            throw UnauthorizedException(message ?? 'Session expired. Please log in again.');
+            apiException = UnauthorizedException(message ?? 'Session expired. Please log in again.');
           case 403:
-            throw ForbiddenException(message ?? 'You do not have permission for this action.');
+            apiException = ForbiddenException(message ?? 'You do not have permission for this action.');
           case 404:
-            throw NotFoundException(message ?? 'Resource not found.');
+            apiException = NotFoundException(message ?? 'Resource not found.');
           case >= 500:
-            throw ServerException(message ?? 'Server error. Please try again later.', statusCode);
+            apiException = ServerException(message ?? 'Server error. Please try again later.', statusCode);
           default:
-            throw ServerException(message ?? 'Unexpected error.', statusCode);
+            apiException = ServerException(message ?? 'Unexpected error.', statusCode);
         }
 
       case DioExceptionType.cancel:
-        // Request was cancelled — don't throw, just reject
         handler.reject(err);
         return;
 
       case DioExceptionType.badCertificate:
-        throw const NetworkException('Security certificate error.');
+        apiException = const NetworkException('Security certificate error.');
 
       case DioExceptionType.unknown:
-        throw NetworkException(err.message ?? 'An unexpected error occurred.');
+        // Check if already wrapped from a previous interceptor pass
+        if (err.error is ApiException) {
+          apiException = err.error as ApiException;
+        } else {
+          apiException = NetworkException(err.message ?? 'An unexpected error occurred.');
+        }
     }
+
+    handler.reject(
+      DioException(
+        requestOptions: err.requestOptions,
+        response: err.response,
+        type: err.type,
+        error: apiException,
+      ),
+    );
   }
 }

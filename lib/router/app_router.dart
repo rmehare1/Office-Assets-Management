@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../providers/auth_provider.dart';
-import '../screens/login_screen.dart';
-import '../screens/home_screen.dart';
-import '../screens/dashboard_screen.dart';
-import '../screens/assets_list_screen.dart';
-import '../screens/asset_detail_screen.dart';
-import '../screens/asset_form_screen.dart';
-import '../screens/profile_screen.dart';
-import '../screens/masters/category_list_screen.dart';
-import '../screens/masters/status_list_screen.dart';
+import 'package:office_assets_app/providers/auth_provider.dart';
+import 'package:office_assets_app/screens/shared/login_screen.dart';
+import 'package:office_assets_app/screens/shared/home_screen.dart';
+import 'package:office_assets_app/screens/admin/dashboard_screen.dart';
+import 'package:office_assets_app/screens/admin/assets_list_screen.dart';
+import 'package:office_assets_app/screens/admin/asset_detail_screen.dart';
+import 'package:office_assets_app/screens/admin/asset_form_screen.dart';
+import 'package:office_assets_app/screens/shared/profile_screen.dart';
+import 'package:office_assets_app/screens/admin/masters/category_list_screen.dart';
+import 'package:office_assets_app/screens/admin/masters/department_list_screen.dart';
+import 'package:office_assets_app/screens/admin/masters/location_list_screen.dart';
+import 'package:office_assets_app/screens/admin/masters/status_list_screen.dart';
+import 'package:office_assets_app/screens/admin/users/users_list_screen.dart';
+import 'package:office_assets_app/screens/user/my_assets_screen.dart';
+import 'package:office_assets_app/screens/user/tickets_screen.dart';
 
 CustomTransitionPage<void> _fadeSlideTransition(
   GoRouterState state,
@@ -74,7 +79,21 @@ GoRouter appRouter(AuthProvider authProvider) {
       final isLoginRoute = state.matchedLocation == '/login';
 
       if (!isAuthenticated && !isLoginRoute) return '/login';
-      if (isAuthenticated && isLoginRoute) return '/dashboard';
+      if (isAuthenticated && isLoginRoute) {
+        return authProvider.isAdmin ? '/dashboard' : '/my-assets';
+      }
+
+      // Block non-admin from admin-only routes
+      if (isAuthenticated && !authProvider.isAdmin) {
+        final loc = state.matchedLocation;
+        if (loc == '/dashboard' ||
+            loc == '/assets' ||
+            loc == '/assets/new' ||
+            loc.endsWith('/edit') ||
+            loc.startsWith('/users')) {
+          return '/my-assets';
+        }
+      }
       return null;
     },
     routes: [
@@ -144,6 +163,31 @@ GoRouter appRouter(AuthProvider authProvider) {
             path: '/statuses',
             pageBuilder: (context, state) =>
                 _fadeSlideTransition(state, const StatusListScreen()),
+          ),
+          GoRoute(
+            path: '/locations',
+            pageBuilder: (context, state) =>
+                _fadeSlideTransition(state, const LocationListScreen()),
+          ),
+          GoRoute(
+            path: '/departments',
+            pageBuilder: (context, state) =>
+                _fadeSlideTransition(state, const DepartmentListScreen()),
+          ),
+          GoRoute(
+            path: '/users',
+            pageBuilder: (context, state) =>
+                _fadeSlideTransition(state, const UsersListScreen()),
+          ),
+          GoRoute(
+            path: '/my-assets',
+            pageBuilder: (context, state) =>
+                _fadeSlideTransition(state, const MyAssetsScreen()),
+          ),
+          GoRoute(
+            path: '/tickets',
+            pageBuilder: (context, state) =>
+                _fadeSlideTransition(state, const TicketsScreen()),
           ),
         ],
       ),

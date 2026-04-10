@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/user.dart';
-import '../services/api_service.dart';
+import 'package:office_assets_app/models/user.dart';
+import 'package:office_assets_app/services/api_service.dart';
 
 class UserProvider extends ChangeNotifier {
   final ApiService _apiService;

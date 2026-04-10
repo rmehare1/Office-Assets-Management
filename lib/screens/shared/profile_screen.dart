@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
-import '../providers/theme_provider.dart';
+import 'package:office_assets_app/providers/auth_provider.dart';
+import 'package:office_assets_app/providers/theme_provider.dart';
 import 'package:go_router/go_router.dart';
-import '../theme/app_theme.dart';
+import 'package:office_assets_app/theme/app_theme.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -85,10 +85,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _InfoTile(icon: Icons.email_outlined, label: 'Email', value: user.email),
-                  _InfoTile(icon: Icons.phone_outlined, label: 'Phone', value: user.phone),
-                  _InfoTile(icon: Icons.business_outlined, label: 'Department', value: user.department),
-                  _InfoTile(icon: Icons.inventory_2_outlined, label: 'My Assets', value: '${user.assignedAssets} assigned'),
+                  _InfoTile(
+                    icon: Icons.email_outlined,
+                    label: 'Email',
+                    value: user.email,
+                  ),
+                  _InfoTile(
+                    icon: Icons.phone_outlined,
+                    label: 'Phone',
+                    value: user.phone,
+                  ),
+                  _InfoTile(
+                    icon: Icons.business_outlined,
+                    label: 'Department',
+                    value: user.department,
+                  ),
+                  _InfoTile(
+                    icon: Icons.inventory_2_outlined,
+                    label: 'My Assets',
+                    value: '${user.assignedAssets} assigned',
+                  ),
                 ],
               ),
             ),
@@ -124,21 +140,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onChanged: (_) => themeProvider.toggleTheme(),
                 ),
                 const SizedBox(height: 8),
-                ListTile(
-                  title: const Text('Manage Categories'),
-                  subtitle: const Text('Add, edit, or remove asset categories'),
-                  leading: const Icon(Icons.category_outlined),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.go('/categories'),
-                ),
-                ListTile(
-                  title: const Text('Manage Statuses'),
-                  subtitle: const Text('Add, edit, or remove asset statuses'),
-                  leading: const Icon(Icons.info_outlined),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.go('/statuses'),
-                ),
-                const SizedBox(height: 8),
+                if (user.role == 'admin')
+                  ListTile(
+                    title: const Text('Manage Categories'),
+                    subtitle: const Text(
+                      'Add, edit, or remove asset categories',
+                    ),
+                    leading: const Icon(Icons.category_outlined),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.go('/categories'),
+                  ),
+                if (user.role == 'admin')
+                  ListTile(
+                    title: const Text('Manage Statuses'),
+                    subtitle: const Text('Add, edit, or remove asset statuses'),
+                    leading: const Icon(Icons.info_outlined),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.go('/statuses'),
+                  ),
+                if (user.role == 'admin')
+                  ListTile(
+                    title: const Text('Manage Locations'),
+                    subtitle: const Text(
+                      'Add, edit, or remove asset locations',
+                    ),
+                    leading: const Icon(Icons.location_on_outlined),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.go('/locations'),
+                  ),
+                if (user.role == 'admin')
+                  ListTile(
+                    title: const Text('Manage Departments'),
+                    subtitle: const Text('Add, edit, or remove departments'),
+                    leading: const Icon(Icons.business_outlined),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.go('/departments'),
+                  ),
+                if (user.role == 'admin') const SizedBox(height: 8),
               ],
             ),
           ),
@@ -195,9 +233,20 @@ class _InfoTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: textTheme.labelSmall?.copyWith(color: colors.onSurfaceVariant)),
+                Text(
+                  label,
+                  style: textTheme.labelSmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(value, style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500, color: colors.onSurface)),
+                Text(
+                  value,
+                  style: textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: colors.onSurface,
+                  ),
+                ),
               ],
             ),
           ),

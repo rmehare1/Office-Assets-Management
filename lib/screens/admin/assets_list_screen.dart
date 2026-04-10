@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../models/asset.dart';
-import '../providers/asset_provider.dart';
-import '../widgets/asset_card.dart';
-import '../providers/status_provider.dart';
-import '../widgets/staggered_list_item.dart';
+import 'package:office_assets_app/models/asset.dart';
+import 'package:office_assets_app/providers/asset_provider.dart';
+import 'package:office_assets_app/widgets/asset_card.dart';
+import 'package:office_assets_app/providers/status_provider.dart';
+import 'package:office_assets_app/widgets/staggered_list_item.dart';
 
 class AssetsListScreen extends StatelessWidget {
   const AssetsListScreen({super.key});

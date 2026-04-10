@@ -11,7 +11,8 @@ class Asset {
   final String? statusColorStr;
   final String assignedTo;
   final String serialNumber;
-  final String location;
+  final String locationId;
+  final String locationName;
   final DateTime purchaseDate;
   final double purchasePrice;
   final String? imageUrl;
@@ -28,7 +29,8 @@ class Asset {
     this.statusColorStr,
     required this.assignedTo,
     required this.serialNumber,
-    required this.location,
+    required this.locationId,
+    required this.locationName,
     required this.purchaseDate,
     required this.purchasePrice,
     this.imageUrl,
@@ -47,7 +49,8 @@ class Asset {
       statusColorStr: json['status_color'] as String?,
       assignedTo: json['assigned_to_name'] as String? ?? json['assigned_to'] as String? ?? '',
       serialNumber: json['serial_number'] as String,
-      location: json['location'] as String,
+      locationId: json['location_id'] as String? ?? '',
+      locationName: json['location_name'] as String? ?? json['location'] as String? ?? '',
       purchaseDate: DateTime.parse(json['purchase_date'] as String),
       purchasePrice: double.parse(json['purchase_price'].toString()),
       imageUrl: json['image_url'] as String?,
@@ -63,7 +66,8 @@ class Asset {
       'status_id': statusId,
       'assigned_to': assignedTo.isEmpty ? null : assignedTo,
       'serial_number': serialNumber,
-      'location': location,
+      'location_id': locationId.isEmpty ? null : locationId,
+      'location_name': locationName,
       'purchase_date': purchaseDate.toIso8601String().split('T')[0],
       'purchase_price': purchasePrice,
       'image_url': imageUrl,
@@ -82,7 +86,8 @@ class Asset {
     String? statusColorStr,
     String? assignedTo,
     String? serialNumber,
-    String? location,
+    String? locationId,
+    String? locationName,
     DateTime? purchaseDate,
     double? purchasePrice,
     String? imageUrl,
@@ -99,7 +104,8 @@ class Asset {
       statusColorStr: statusColorStr ?? this.statusColorStr,
       assignedTo: assignedTo ?? this.assignedTo,
       serialNumber: serialNumber ?? this.serialNumber,
-      location: location ?? this.location,
+      locationId: locationId ?? this.locationId,
+      locationName: locationName ?? this.locationName,
       purchaseDate: purchaseDate ?? this.purchaseDate,
       purchasePrice: purchasePrice ?? this.purchasePrice,
       imageUrl: imageUrl ?? this.imageUrl,

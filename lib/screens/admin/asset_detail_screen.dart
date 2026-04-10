@@ -1,17 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:office_assets_app/models/asset.dart';
 import 'package:office_assets_app/providers/asset_provider.dart';
+import 'package:office_assets_app/providers/auth_provider.dart';
 import 'package:office_assets_app/theme/app_theme.dart';
 import 'package:office_assets_app/widgets/status_badge.dart';
 
-class AssetDetailScreen extends StatelessWidget {
+class AssetDetailScreen extends StatefulWidget {
   final String assetId;
 
   const AssetDetailScreen({super.key, required this.assetId});
 
+  @override
+  State<AssetDetailScreen> createState() => _AssetDetailScreenState();
+}
+
+class _AssetDetailScreenState extends State<AssetDetailScreen> {
+  Asset? _fetchedAsset;
+  bool _isFetching = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final inProvider = context.read<AssetProvider>().getById(widget.assetId);
+      if (inProvider == null) _fetchFromApi();
+    });
+  }
+
+  Future<void> _fetchFromApi() async {
+    setState(() => _isFetching = true);
+    try {
+      final asset = await context.read<AuthProvider>().apiService.getAsset(widget.assetId);
+      if (mounted) setState(() { _fetchedAsset = asset; _isFetching = false; });
+    } catch (e) {
+      if (mounted) setState(() => _isFetching = false);
+    }
+  }
+
   Future<void> _confirmDelete(BuildContext context) async {
-    final asset = context.read<AssetProvider>().getById(assetId);
+    final asset = context.read<AssetProvider>().getById(widget.assetId);
     if (asset == null) return;
 
     final confirmed = await showDialog<bool>(
@@ -34,7 +63,7 @@ class AssetDetailScreen extends StatelessWidget {
     );
 
     if (confirmed == true && context.mounted) {
-      await context.read<AssetProvider>().deleteAsset(assetId);
+      await context.read<AssetProvider>().deleteAsset(widget.assetId);
       if (context.mounted) context.go('/assets');
     }
   }
@@ -43,7 +72,15 @@ class AssetDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
-    final asset = context.watch<AssetProvider>().getById(assetId);
+    final isAdmin = context.watch<AuthProvider>().isAdmin;
+    final asset = context.watch<AssetProvider>().getById(widget.assetId) ?? _fetchedAsset;
+
+    if (_isFetching) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Asset Details')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
 
     if (asset == null) {
       return Scaffold(
@@ -56,11 +93,11 @@ class AssetDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Asset Details'),
         actions: [
-          IconButton(
+          if (isAdmin) IconButton(
             icon: const Icon(Icons.edit_outlined),
-            onPressed: () => context.go('/assets/$assetId/edit'),
+            onPressed: () => context.go('/assets/${widget.assetId}/edit'),
           ),
-          IconButton(
+          if (isAdmin) IconButton(
             icon: const Icon(Icons.delete_outlined),
             onPressed: () => _confirmDelete(context),
           ),
@@ -97,11 +134,7 @@ class AssetDetailScreen extends StatelessWidget {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
-                  StatusBadge(
-                    statusName: asset.statusName,
-                    statusColorStr: asset.statusColorStr,
-                    fontSize: 14,
-                  ),
+                  StatusBadge(statusName: asset.statusName, statusColorStr: asset.statusColorStr, fontSize: 14),
                 ],
               ),
             ),
@@ -146,7 +179,7 @@ class AssetDetailScreen extends StatelessWidget {
                   _DetailRow(
                     icon: Icons.currency_rupee,
                     label: 'Purchase Price',
-                    value: asset.purchasePrice.toStringAsFixed(2),
+                    value: '${asset.purchasePrice.toStringAsFixed(2)}',
                   ),
                 ],
               ),

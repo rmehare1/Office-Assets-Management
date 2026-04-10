@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/asset.dart';
+import 'package:office_assets_app/models/asset.dart';
 import 'status_badge.dart';
 
 class AssetCard extends StatelessWidget {
@@ -52,11 +52,24 @@ class AssetCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${asset.categoryLabel} • ${asset.location}',
+                      '${asset.categoryLabel} • ${asset.locationName}',
                       style: textTheme.bodySmall?.copyWith(
                         color: colors.onSurfaceVariant,
                       ),
                     ),
+                    if (asset.assignedTo.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.person_outline, size: 12, color: colors.onSurfaceVariant),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Assigned to: ${asset.assignedTo}',
+                            style: textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),

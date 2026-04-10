@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:office_assets_app/models/asset.dart';
 import 'package:office_assets_app/models/category.dart';
 import 'package:office_assets_app/providers/asset_provider.dart';
 import 'package:office_assets_app/providers/status_provider.dart';
 import 'package:office_assets_app/providers/category_provider.dart';
+import 'package:office_assets_app/theme/app_theme.dart';
 import 'package:office_assets_app/widgets/asset_card.dart';
 import 'package:office_assets_app/widgets/stat_card.dart';
 import 'package:office_assets_app/widgets/staggered_list_item.dart';
@@ -181,8 +183,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                               ),
                             ),
                           ),
-                          ...List.generate(statProvider.statuses.length, (index) {
-                            final status = statProvider.statuses[index];
+                          ...List.generate(
+                            statProvider.statuses.where((s) => s.name.toLowerCase() != 'retired').length,
+                            (index) {
+                            final status = statProvider.statuses.where((s) => s.name.toLowerCase() != 'retired').toList()[index];
                             final count = assetProvider.assets.where((a) => a.statusId == status.id).length;
                             return _buildStatCard(
                               index + 1,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../models/asset.dart';
-import '../services/api_service.dart';
-import '../services/api_exception.dart';
+import 'package:office_assets_app/models/asset.dart';
+import 'package:office_assets_app/services/api_service.dart';
+import 'package:office_assets_app/services/api_exception.dart';
 
 class AssetProvider extends ChangeNotifier {
   final ApiService _apiService;
@@ -38,7 +38,7 @@ class AssetProvider extends ChangeNotifier {
       result = result.where((a) {
         return a.name.toLowerCase().contains(query) ||
             a.categoryLabel.toLowerCase().contains(query) ||
-            a.location.toLowerCase().contains(query) ||
+            a.locationName.toLowerCase().contains(query) ||
             a.serialNumber.toLowerCase().contains(query);
       }).toList();
     }

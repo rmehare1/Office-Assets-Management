@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../models/user.dart';
-import '../services/api_service.dart';
-import '../services/api_exception.dart';
+import 'package:office_assets_app/models/user.dart';
+import 'package:office_assets_app/services/api_service.dart';
+import 'package:office_assets_app/services/api_exception.dart';
 
 class AuthProvider extends ChangeNotifier {
   final ApiService _apiService;
@@ -15,6 +15,7 @@ class AuthProvider extends ChangeNotifier {
 
   AppUser? get currentUser => _currentUser;
   bool get isAuthenticated => _isAuthenticated;
+  bool get isAdmin => _currentUser?.role == 'admin';
   bool get isLoading => _isLoading;
   String? get error => _error;
   ApiService get apiService => _apiService;
