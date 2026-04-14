@@ -29,19 +29,102 @@ class AuthProvider extends ChangeNotifier {
       final data = await _apiService.login(email, password);
       _currentUser = AppUser.fromJson(data['user'] as Map<String, dynamic>);
       _isAuthenticated = true;
-      _isLoading = false;
-      notifyListeners();
       return true;
     } on NetworkException {
       _error = 'No internet connection. Please check your network.';
-      _isLoading = false;
-      notifyListeners();
       return false;
     } on ApiException catch (e) {
       _error = e.message;
+      return false;
+    } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<bool> register(
+    String name,
+    String email,
+    String password, {
+    String? department,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final data = await _apiService.register(
+        name,
+        email,
+        password,
+        department: department,
+      );
+      _currentUser = AppUser.fromJson(data['user'] as Map<String, dynamic>);
+      _isAuthenticated = true;
+      return true;
+    } on NetworkException {
+      _error = 'No internet connection. Please check your network.';
       return false;
+    } on ApiException catch (e) {
+      _error = e.message;
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> updateProfile(
+    String name, {
+    String? phone,
+    String? department,
+    String? email,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final data = await _apiService.updateProfile(
+        name,
+        phone: phone,
+        department: department,
+        email: email,
+      );
+      _currentUser = AppUser.fromJson(data['user'] as Map<String, dynamic>);
+      return true;
+    } on NetworkException {
+      _error = 'No internet connection.';
+      return false;
+    } on ApiException catch (e) {
+      _error = e.message;
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      await _apiService.changePassword(currentPassword, newPassword);
+      return true;
+    } on NetworkException {
+      _error = 'No internet connection.';
+      return false;
+    } on ApiException catch (e) {
+      _error = e.message;
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
@@ -51,6 +134,51 @@ class AuthProvider extends ChangeNotifier {
     _error = null;
     _apiService.setToken(null);
     notifyListeners();
+  }
+
+  Future<String?> forgotPassword(String email) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final data = await _apiService.forgotPassword(email);
+      // Return the OTP in dev mode so the user can see it in UI
+      return data['otp'];
+    } on NetworkException {
+      _error = 'No internet connection.';
+      return null;
+    } on ApiException catch (e) {
+      _error = e.message;
+      return null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> resetPassword(
+    String email,
+    String token,
+    String newPassword,
+  ) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      await _apiService.resetPassword(email, token, newPassword);
+      return true;
+    } on NetworkException {
+      _error = 'No internet connection.';
+      return false;
+    } on ApiException catch (e) {
+      _error = e.message;
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   void clearError() {

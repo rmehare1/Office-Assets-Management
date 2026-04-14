@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:office_assets_app/models/asset.dart';
 import 'package:office_assets_app/models/category.dart';
 import 'package:office_assets_app/providers/asset_provider.dart';
 import 'package:office_assets_app/providers/status_provider.dart';
 import 'package:office_assets_app/providers/category_provider.dart';
-import 'package:office_assets_app/theme/app_theme.dart';
+import 'package:office_assets_app/providers/ticket_provider.dart';
 import 'package:office_assets_app/widgets/asset_card.dart';
 import 'package:office_assets_app/widgets/stat_card.dart';
 import 'package:office_assets_app/widgets/staggered_list_item.dart';
@@ -68,6 +67,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       if (context.read<StatusProvider>().statuses.isEmpty) {
         context.read<StatusProvider>().loadStatuses();
       }
+      context.read<TicketProvider>().loadAllTickets();
     });
 
     _checkTutorial();
@@ -111,7 +111,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
     return Colors.grey;
   }
-  
+
   IconData _parseIcon(String? iconStr) {
     if (iconStr == 'laptop') return Icons.computer;
     if (iconStr == 'monitor') return Icons.monitor;
@@ -134,7 +134,10 @@ class _DashboardScreenState extends State<DashboardScreen>
       children: [
         Scaffold(
           appBar: AppBar(title: const Text('Dashboard')),
-          body: (assetProvider.isLoading || statProvider.isLoading || catProvider.isLoading)
+          body:
+              (assetProvider.isLoading ||
+                  statProvider.isLoading ||
+                  catProvider.isLoading)
               ? const Center(child: CircularProgressIndicator())
               : RefreshIndicator(
                   onRefresh: () async {
@@ -184,24 +187,47 @@ class _DashboardScreenState extends State<DashboardScreen>
                             ),
                           ),
                           ...List.generate(
-                            statProvider.statuses.where((s) => s.name.toLowerCase() != 'retired').length,
+                            statProvider.statuses
+                                .where((s) => s.name.toLowerCase() != 'retired')
+                                .length,
                             (index) {
-                            final status = statProvider.statuses.where((s) => s.name.toLowerCase() != 'retired').toList()[index];
-                            final count = assetProvider.assets.where((a) => a.statusId == status.id).length;
-                            return _buildStatCard(
-                              index + 1,
-                              GestureDetector(
-                                onTap: () => _navigateWithFilter(context, status.id),
-                                child: StatCard(
-                                  title: status.name,
-                                  value: '$count',
-                                  icon: Icons.info_outline,
-                                  color: _parseColor(status.color),
+                              final status = statProvider.statuses
+                                  .where(
+                                    (s) => s.name.toLowerCase() != 'retired',
+                                  )
+                                  .toList()[index];
+                              final count = assetProvider.assets
+                                  .where((a) => a.statusId == status.id)
+                                  .length;
+                              return _buildStatCard(
+                                index + 1,
+                                GestureDetector(
+                                  onTap: () =>
+                                      _navigateWithFilter(context, status.id),
+                                  child: StatCard(
+                                    title: status.name,
+                                    value: '$count',
+                                    icon: Icons.info_outline,
+                                    color: _parseColor(status.color),
+                                  ),
                                 ),
-                              ),
-                            );
-                          }),
+                              );
+                            },
+                          ),
                         ],
+                      ),
+                      const SizedBox(height: 12),
+                      _RecentTicketsBanner(
+                        pendingCount: context
+                            .watch<TicketProvider>()
+                            .allTickets
+                            .where((t) => t.status == 'pending')
+                            .length,
+                        totalCount: context
+                            .watch<TicketProvider>()
+                            .allTickets
+                            .length,
+                        onTap: () => context.go('/admin/tickets'),
                       ),
                       const SizedBox(height: 24),
 
@@ -218,23 +244,32 @@ class _DashboardScreenState extends State<DashboardScreen>
                           height: 44,
                           child: ListView(
                             scrollDirection: Axis.horizontal,
-                            children: assetProvider.categoryBreakdown.entries.map((entry) {
-                              final cat = catProvider.categories.firstWhere(
-                                (c) => c.name == entry.key, 
-                                orElse: () => Category(id: '', name: entry.key, icon: 'devices', color: '0xFF9E9E9E')
-                              );
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: Chip(
-                                  avatar: Icon(
-                                    _parseIcon(cat.icon),
-                                    size: 18,
-                                    color: _parseColor(cat.color),
-                                  ),
-                                  label: Text('${entry.key}: ${entry.value}'),
-                                ),
-                              );
-                            }).toList(),
+                            children: assetProvider.categoryBreakdown.entries
+                                .map((entry) {
+                                  final cat = catProvider.categories.firstWhere(
+                                    (c) => c.name == entry.key,
+                                    orElse: () => Category(
+                                      id: '',
+                                      name: entry.key,
+                                      icon: 'devices',
+                                      color: '0xFF9E9E9E',
+                                    ),
+                                  );
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: Chip(
+                                      avatar: Icon(
+                                        _parseIcon(cat.icon),
+                                        size: 18,
+                                        color: _parseColor(cat.color),
+                                      ),
+                                      label: Text(
+                                        '${entry.key}: ${entry.value}',
+                                      ),
+                                    ),
+                                  );
+                                })
+                                .toList(),
                           ),
                         ),
                       const SizedBox(height: 24),
@@ -328,6 +363,124 @@ class _DashboardScreenState extends State<DashboardScreen>
             onComplete: () => setState(() => _showTutorial = false),
           ),
       ],
+    );
+  }
+}
+
+class _RecentTicketsBanner extends StatelessWidget {
+  final int pendingCount;
+  final int totalCount;
+  final VoidCallback onTap;
+
+  const _RecentTicketsBanner({
+    required this.pendingCount,
+    required this.totalCount,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).colorScheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [
+            Colors.orange.withValues(alpha: 0.15),
+            Colors.orange.withValues(alpha: 0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(
+          color: Colors.orange.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.confirmation_number_outlined,
+                    color: Colors.orange,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Recent Tickets',
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'You have $pendingCount active requests to review',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                      Text(
+                        '$totalCount total requests in system',
+                        style: textTheme.labelSmall?.copyWith(
+                          color: colors.onSurfaceVariant.withValues(alpha: 0.7),
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '$pendingCount',
+                      style: textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: Colors.orange,
+                        letterSpacing: -1,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          'View All',
+                          style: textTheme.labelSmall?.copyWith(
+                            color: Colors.orange,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const Icon(
+                          Icons.chevron_right,
+                          size: 14,
+                          color: Colors.orange,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

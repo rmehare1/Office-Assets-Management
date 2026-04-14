@@ -15,6 +15,10 @@ import 'package:office_assets_app/screens/admin/masters/status_list_screen.dart'
 import 'package:office_assets_app/screens/admin/users/users_list_screen.dart';
 import 'package:office_assets_app/screens/user/my_assets_screen.dart';
 import 'package:office_assets_app/screens/user/tickets_screen.dart';
+import 'package:office_assets_app/screens/admin/admin_tickets_screen.dart';
+import 'package:office_assets_app/screens/shared/signup_screen.dart';
+import 'package:office_assets_app/screens/shared/forgot_password_screen.dart';
+import 'package:office_assets_app/screens/shared/reset_password_screen.dart';
 
 CustomTransitionPage<void> _fadeSlideTransition(
   GoRouterState state,
@@ -76,10 +80,14 @@ GoRouter appRouter(AuthProvider authProvider) {
     initialLocation: '/dashboard',
     redirect: (context, state) {
       final isAuthenticated = authProvider.isAuthenticated;
-      final isLoginRoute = state.matchedLocation == '/login';
+      final path = state.uri.path;
+      final isPublicRoute = path == '/login' ||
+          path == '/signup' ||
+          path == '/forgot-password' ||
+          path == '/reset-password';
 
-      if (!isAuthenticated && !isLoginRoute) return '/login';
-      if (isAuthenticated && isLoginRoute) {
+      if (!isAuthenticated && !isPublicRoute) return '/login';
+      if (isAuthenticated && isPublicRoute) {
         return authProvider.isAdmin ? '/dashboard' : '/my-assets';
       }
 
@@ -110,6 +118,31 @@ GoRouter appRouter(AuthProvider authProvider) {
             );
           },
         ),
+      ),
+      GoRoute(
+        path: '/signup',
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: const SignupScreen(),
+          transitionDuration: const Duration(milliseconds: 400),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: CurvedAnimation(parent: animation, curve: Curves.easeIn),
+              child: child,
+            );
+          },
+        ),
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        pageBuilder: (context, state) => _fadeSlideTransition(state, const ForgotPasswordScreen()),
+      ),
+      GoRoute(
+        path: '/reset-password',
+        pageBuilder: (context, state) {
+          final email = state.extra as String? ?? '';
+          return _fadeSlideTransition(state, ResetPasswordScreen(email: email));
+        },
       ),
       ShellRoute(
         builder: (context, state, child) => HomeScreen(child: child),
@@ -178,6 +211,11 @@ GoRouter appRouter(AuthProvider authProvider) {
             path: '/users',
             pageBuilder: (context, state) =>
                 _fadeSlideTransition(state, const UsersListScreen()),
+          ),
+          GoRoute(
+            path: '/admin/tickets',
+            pageBuilder: (context, state) =>
+                _fadeSlideTransition(state, const AdminTicketsScreen()),
           ),
           GoRoute(
             path: '/my-assets',

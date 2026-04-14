@@ -78,64 +78,67 @@ class _TicketsScreenState extends State<TicketsScreen> {
       body: provider.isLoading
           ? const Center(child: CircularProgressIndicator())
           : provider.error != null
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Error loading tickets',
-                        style: textTheme.bodyMedium
-                            ?.copyWith(color: AppTheme.dangerColor),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 12),
-                      FilledButton(
-                        onPressed: () => provider.loadTickets(),
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                )
-              : provider.tickets.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.confirmation_number_outlined,
-                            size: 64,
-                            color: colors.onSurfaceVariant,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No tickets yet',
-                            style: textTheme.titleMedium
-                                ?.copyWith(color: colors.onSurfaceVariant),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Tap + to raise an asset request',
-                            style: textTheme.bodyMedium
-                                ?.copyWith(color: colors.onSurfaceVariant),
-                          ),
-                        ],
-                      ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: () => provider.loadTickets(),
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: provider.tickets.length,
-                        itemBuilder: (context, index) {
-                          final ticket = provider.tickets[index];
-                          return _TicketCard(
-                            ticket: ticket,
-                            statusColor: _statusColor(ticket.status),
-                            typeIcon: _typeIcon(ticket.type),
-                          );
-                        },
-                      ),
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Error loading tickets',
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.dangerColor,
                     ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton(
+                    onPressed: () => provider.loadTickets(),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            )
+          : provider.tickets.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.confirmation_number_outlined,
+                    size: 64,
+                    color: colors.onSurfaceVariant,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No tickets yet',
+                    style: textTheme.titleMedium?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tap + to raise an asset request',
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: () => provider.loadTickets(),
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: provider.tickets.length,
+                itemBuilder: (context, index) {
+                  final ticket = provider.tickets[index];
+                  return _TicketCard(
+                    ticket: ticket,
+                    statusColor: _statusColor(ticket.status),
+                    typeIcon: _typeIcon(ticket.type),
+                  );
+                },
+              ),
+            ),
     );
   }
 }
@@ -178,8 +181,10 @@ class _TicketCard extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
@@ -224,6 +229,50 @@ class _TicketCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ],
+            if (ticket.status == 'rejected' &&
+                ticket.rejectionReason != null &&
+                ticket.rejectionReason!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.dangerColor.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: AppTheme.dangerColor.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 16,
+                          color: AppTheme.dangerColor,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Rejection Reason',
+                          style: textTheme.labelSmall?.copyWith(
+                            color: AppTheme.dangerColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      ticket.rejectionReason!,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colors.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 10),
             Text(
               _formatDate(ticket.createdAt),
@@ -231,16 +280,113 @@ class _TicketCard extends StatelessWidget {
                 color: colors.onSurfaceVariant,
               ),
             ),
+            if (ticket.status == 'pending') ...[
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton.icon(
+                    onPressed: () => _showEditTicketSheet(context, ticket),
+                    icon: const Icon(Icons.edit_outlined, size: 18),
+                    label: const Text('Edit'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: colors.primary,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton.icon(
+                    onPressed: () => _confirmCancel(context),
+                    icon: const Icon(Icons.cancel_outlined, size: 18),
+                    label: const Text('Cancel Ticket'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.dangerColor,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
+  void _showEditTicketSheet(BuildContext context, Ticket ticket) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _CreateTicketSheet(ticketToEdit: ticket),
+    );
+  }
+
+  Future<void> _confirmCancel(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel Ticket?'),
+        content: const Text(
+          'Are you sure you want to cancel this ticket? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Keep Ticket'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppTheme.dangerColor,
+            ),
+            child: const Text('Yes, Cancel'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      final success = await context.read<TicketProvider>().cancelTicket(
+        ticket.id,
+      );
+      if (context.mounted) {
+        if (success) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Ticket cancelled')));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                context.read<TicketProvider>().error ?? 'Failed to cancel',
+              ),
+              backgroundColor: AppTheme.dangerColor,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   String _formatDate(DateTime date) {
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}, '
         '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
@@ -250,7 +396,9 @@ class _TicketCard extends StatelessWidget {
 // ── Create Ticket Bottom Sheet ───────────────────────
 
 class _CreateTicketSheet extends StatefulWidget {
-  const _CreateTicketSheet();
+  final Ticket? ticketToEdit;
+
+  const _CreateTicketSheet({this.ticketToEdit});
 
   @override
   State<_CreateTicketSheet> createState() => _CreateTicketSheetState();
@@ -268,6 +416,11 @@ class _CreateTicketSheetState extends State<_CreateTicketSheet> {
   @override
   void initState() {
     super.initState();
+    if (widget.ticketToEdit != null) {
+      _type = widget.ticketToEdit!.type;
+      _selectedAssetId = widget.ticketToEdit!.assetId;
+      _notesController.text = widget.ticketToEdit!.notes ?? '';
+    }
     _loadAvailableAssets();
   }
 
@@ -296,27 +449,45 @@ class _CreateTicketSheetState extends State<_CreateTicketSheet> {
   Future<void> _submit() async {
     setState(() => _isSubmitting = true);
     final provider = context.read<TicketProvider>();
-    final success = await provider.createTicket(
-      type: _type,
-      assetId: _selectedAssetId,
-      notes: _notesController.text.trim().isEmpty
-          ? null
-          : _notesController.text.trim(),
-    );
+
+    bool success;
+    if (widget.ticketToEdit != null) {
+      success = await provider.updateTicket(
+        id: widget.ticketToEdit!.id,
+        type: _type,
+        assetId: _selectedAssetId,
+        notes: _notesController.text.trim().isEmpty
+            ? null
+            : _notesController.text.trim(),
+      );
+    } else {
+      success = await provider.createTicket(
+        type: _type,
+        assetId: _selectedAssetId,
+        notes: _notesController.text.trim().isEmpty
+            ? null
+            : _notesController.text.trim(),
+      );
+    }
+
     if (mounted) {
       setState(() => _isSubmitting = false);
       if (success) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ticket created successfully'),
+          SnackBar(
+            content: Text(
+              widget.ticketToEdit != null
+                  ? 'Ticket updated successfully'
+                  : 'Ticket created successfully',
+            ),
             behavior: SnackBarBehavior.floating,
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(provider.error ?? 'Failed to create ticket'),
+            content: Text(provider.error ?? 'Something went wrong'),
             behavior: SnackBarBehavior.floating,
             backgroundColor: AppTheme.dangerColor,
           ),
@@ -349,7 +520,7 @@ class _CreateTicketSheetState extends State<_CreateTicketSheet> {
           ),
           const SizedBox(height: 16),
           Text(
-            'New Ticket',
+            widget.ticketToEdit != null ? 'Edit Ticket' : 'New Ticket',
             style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 20),
@@ -397,10 +568,7 @@ class _CreateTicketSheetState extends State<_CreateTicketSheet> {
                     prefixIcon: Icon(Icons.inventory_2_outlined),
                   ),
                   items: [
-                    const DropdownMenuItem(
-                      value: null,
-                      child: Text('None'),
-                    ),
+                    const DropdownMenuItem(value: null, child: Text('None')),
                     ..._availableAssets.map(
                       (asset) => DropdownMenuItem(
                         value: asset.id,
@@ -442,7 +610,13 @@ class _CreateTicketSheetState extends State<_CreateTicketSheet> {
                     ),
                   )
                 : const Icon(Icons.send),
-            label: Text(_isSubmitting ? 'Submitting...' : 'Submit Ticket'),
+            label: Text(
+              _isSubmitting
+                  ? 'Submitting...'
+                  : (widget.ticketToEdit != null
+                        ? 'Update Ticket'
+                        : 'Submit Ticket'),
+            ),
           ),
         ],
       ),

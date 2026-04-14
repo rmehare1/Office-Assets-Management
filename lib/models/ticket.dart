@@ -6,6 +6,8 @@ class Ticket {
   final String? assetName;
   final String status; // 'pending' | 'approved' | 'rejected' | 'closed'
   final String? notes;
+  final String? rejectionReason;
+  final String? userName;
   final DateTime createdAt;
 
   const Ticket({
@@ -16,6 +18,8 @@ class Ticket {
     this.assetName,
     required this.status,
     this.notes,
+    this.rejectionReason,
+    this.userName,
     required this.createdAt,
   });
 
@@ -28,6 +32,8 @@ class Ticket {
       assetName: json['asset_name'] as String?,
       status: json['status'] as String,
       notes: json['notes'] as String?,
+      rejectionReason: json['rejection_reason'] as String?,
+      userName: json['user_name'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
@@ -48,5 +54,24 @@ class Ticket {
       default:
         return status;
     }
+  }
+
+  Ticket copyWith({
+    String? status,
+    String? notes,
+    String? rejectionReason,
+  }) {
+    return Ticket(
+      id: id,
+      userId: userId,
+      type: type,
+      assetId: assetId,
+      assetName: assetName,
+      status: status ?? this.status,
+      notes: notes ?? this.notes,
+      rejectionReason: rejectionReason ?? this.rejectionReason,
+      userName: userName,
+      createdAt: createdAt,
+    );
   }
 }
