@@ -5,11 +5,13 @@ import 'status_badge.dart';
 class AssetCard extends StatelessWidget {
   final Asset asset;
   final VoidCallback? onTap;
+  final bool showStatus;
 
   const AssetCard({
     super.key,
     required this.asset,
     this.onTap,
+    this.showStatus = true,
   });
 
   @override
@@ -61,11 +63,17 @@ class AssetCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(Icons.person_outline, size: 12, color: colors.onSurfaceVariant),
+                          Icon(
+                            Icons.person_outline,
+                            size: 12,
+                            color: colors.onSurfaceVariant,
+                          ),
                           const SizedBox(width: 4),
                           Text(
-                            'Assigned to: ${asset.assignedTo}',
-                            style: textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+                            'Assigned to: ${asset.assignedToName}',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colors.onSurfaceVariant,
+                            ),
                           ),
                         ],
                       ),
@@ -73,7 +81,11 @@ class AssetCard extends StatelessWidget {
                   ],
                 ),
               ),
-              StatusBadge(statusName: asset.statusName, statusColorStr: asset.statusColorStr),
+              if (this.showStatus)
+                StatusBadge(
+                  statusName: asset.statusName,
+                  statusColorStr: asset.statusColorStr,
+                ),
             ],
           ),
         ),

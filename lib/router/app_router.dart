@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:office_assets_app/providers/auth_provider.dart';
+import 'package:office_assets_app/screens/admin/users/users_assets_screen.dart';
 import 'package:office_assets_app/screens/shared/login_screen.dart';
 import 'package:office_assets_app/screens/shared/home_screen.dart';
 import 'package:office_assets_app/screens/admin/dashboard_screen.dart';
@@ -16,9 +17,11 @@ import 'package:office_assets_app/screens/admin/users/users_list_screen.dart';
 import 'package:office_assets_app/screens/user/my_assets_screen.dart';
 import 'package:office_assets_app/screens/user/tickets_screen.dart';
 import 'package:office_assets_app/screens/admin/admin_tickets_screen.dart';
+import 'package:office_assets_app/screens/admin/scanner_screen.dart';
 import 'package:office_assets_app/screens/shared/signup_screen.dart';
 import 'package:office_assets_app/screens/shared/forgot_password_screen.dart';
 import 'package:office_assets_app/screens/shared/reset_password_screen.dart';
+import 'package:office_assets_app/screens/admin/alert_screen.dart';
 
 CustomTransitionPage<void> _fadeSlideTransition(
   GoRouterState state,
@@ -30,15 +33,14 @@ CustomTransitionPage<void> _fadeSlideTransition(
     transitionDuration: const Duration(milliseconds: 300),
     reverseTransitionDuration: const Duration(milliseconds: 250),
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      final fadeIn = Tween<double>(begin: 0.0, end: 1.0).animate(
-        CurvedAnimation(parent: animation, curve: Curves.easeOut),
-      );
+      final fadeIn = Tween<double>(
+        begin: 0.0,
+        end: 1.0,
+      ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut));
       final slideIn = Tween<Offset>(
         begin: const Offset(0.05, 0),
         end: Offset.zero,
-      ).animate(
-        CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-      );
+      ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
       return FadeTransition(
         opacity: fadeIn,
         child: SlideTransition(position: slideIn, child: child),
@@ -60,12 +62,11 @@ CustomTransitionPage<void> _slideUpTransition(
       final slideIn = Tween<Offset>(
         begin: const Offset(0, 0.15),
         end: Offset.zero,
-      ).animate(
-        CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-      );
-      final fadeIn = Tween<double>(begin: 0.0, end: 1.0).animate(
-        CurvedAnimation(parent: animation, curve: Curves.easeOut),
-      );
+      ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
+      final fadeIn = Tween<double>(
+        begin: 0.0,
+        end: 1.0,
+      ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut));
       return FadeTransition(
         opacity: fadeIn,
         child: SlideTransition(position: slideIn, child: child),
@@ -81,7 +82,8 @@ GoRouter appRouter(AuthProvider authProvider) {
     redirect: (context, state) {
       final isAuthenticated = authProvider.isAuthenticated;
       final path = state.uri.path;
-      final isPublicRoute = path == '/login' ||
+      final isPublicRoute =
+          path == '/login' ||
           path == '/signup' ||
           path == '/forgot-password' ||
           path == '/reset-password';
@@ -97,6 +99,7 @@ GoRouter appRouter(AuthProvider authProvider) {
         if (loc == '/dashboard' ||
             loc == '/assets' ||
             loc == '/assets/new' ||
+            loc == '/scanner' ||
             loc.endsWith('/edit') ||
             loc.startsWith('/users')) {
           return '/my-assets';
@@ -135,7 +138,8 @@ GoRouter appRouter(AuthProvider authProvider) {
       ),
       GoRoute(
         path: '/forgot-password',
-        pageBuilder: (context, state) => _fadeSlideTransition(state, const ForgotPasswordScreen()),
+        pageBuilder: (context, state) =>
+            _fadeSlideTransition(state, const ForgotPasswordScreen()),
       ),
       GoRoute(
         path: '/reset-password',
@@ -159,15 +163,22 @@ GoRouter appRouter(AuthProvider authProvider) {
             routes: [
               GoRoute(
                 path: 'new',
-                pageBuilder: (context, state) =>
-                    _slideUpTransition(state, const AssetFormScreen()),
+                pageBuilder: (context, state) {
+                  final scannedData = state.extra as Map<String, dynamic>?;
+                  return _slideUpTransition(
+                    state,
+                    AssetFormScreen(scannedData: scannedData),
+                  );
+                },
               ),
               GoRoute(
                 path: ':id',
                 pageBuilder: (context, state) {
                   final id = state.pathParameters['id']!;
                   return _fadeSlideTransition(
-                      state, AssetDetailScreen(assetId: id));
+                    state,
+                    AssetDetailScreen(assetId: id),
+                  );
                 },
                 routes: [
                   GoRoute(
@@ -175,7 +186,9 @@ GoRouter appRouter(AuthProvider authProvider) {
                     pageBuilder: (context, state) {
                       final id = state.pathParameters['id']!;
                       return _slideUpTransition(
-                          state, AssetFormScreen(assetId: id));
+                        state,
+                        AssetFormScreen(assetId: id),
+                      );
                     },
                   ),
                 ],
@@ -218,9 +231,29 @@ GoRouter appRouter(AuthProvider authProvider) {
                 _fadeSlideTransition(state, const AdminTicketsScreen()),
           ),
           GoRoute(
+            path: '/alerts',
+            pageBuilder: (context, state) =>
+                _fadeSlideTransition(state, const AlertScreen()),
+          ),
+          GoRoute(
+            path: '/scanner',
+            pageBuilder: (context, state) =>
+                _slideUpTransition(state, const ScannerScreen()),
+          ),
+          GoRoute(
             path: '/my-assets',
             pageBuilder: (context, state) =>
                 _fadeSlideTransition(state, const MyAssetsScreen()),
+          ),
+          GoRoute(
+            path: '/users-assets/:userId', // Define the parameter here
+            pageBuilder: (context, state) {
+              final userId = state.pathParameters['userId'] ?? '';
+              return _fadeSlideTransition(
+                state,
+                UsersAssetsScreen(userId: userId),
+              );
+            },
           ),
           GoRoute(
             path: '/tickets',

@@ -12,6 +12,7 @@ import 'providers/department_provider.dart';
 import 'providers/location_provider.dart';
 import 'providers/status_provider.dart';
 import 'providers/ticket_provider.dart';
+import 'providers/alert_provider.dart';
 import 'package:office_assets_app/router/app_router.dart';
 import 'package:office_assets_app/screens/shared/splash_screen.dart';
 
@@ -30,6 +31,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => DepartmentProvider(apiService)),
         ChangeNotifierProvider(create: (_) => StatusProvider(apiService)),
         ChangeNotifierProvider(create: (_) => TicketProvider(apiService)),
+        ChangeNotifierProvider(create: (_) => AlertProvider(apiService)),
       ],
       child: const OfficeAssetsApp(),
     ),

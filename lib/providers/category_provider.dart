@@ -8,7 +8,7 @@ class CategoryProvider extends ChangeNotifier {
   final ApiService _apiService;
 
   List<Category> _categories = [];
-  bool _isLoading = false;
+  bool _isLoading = true;
   String? _error;
 
   CategoryProvider(this._apiService);

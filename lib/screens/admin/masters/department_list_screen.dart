@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:office_assets_app/models/department.dart';
 import 'package:office_assets_app/providers/department_provider.dart';
@@ -12,7 +13,6 @@ class DepartmentListScreen extends StatefulWidget {
 }
 
 class _DepartmentListScreenState extends State<DepartmentListScreen> {
-
   @override
   void initState() {
     super.initState();
@@ -43,15 +43,13 @@ class _DepartmentListScreenState extends State<DepartmentListScreen> {
               onPressed: () async {
                 final deptProvider = context.read<DepartmentProvider>();
                 if (isEditing) {
-                  await deptProvider.updateDepartment(Department(
-                    id: department.id,
-                    name: nameCtrl.text.trim(),
-                  ));
+                  await deptProvider.updateDepartment(
+                    Department(id: department.id, name: nameCtrl.text.trim()),
+                  );
                 } else {
-                  await deptProvider.addDepartment(Department(
-                    id: '',
-                    name: nameCtrl.text.trim(),
-                  ));
+                  await deptProvider.addDepartment(
+                    Department(id: '', name: nameCtrl.text.trim()),
+                  );
                 }
                 if (context.mounted) Navigator.pop(ctx);
               },
@@ -70,7 +68,10 @@ class _DepartmentListScreenState extends State<DepartmentListScreen> {
         title: const Text('Delete Department'),
         content: Text('Delete "${department.name}"?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: AppTheme.dangerColor),
@@ -88,7 +89,13 @@ class _DepartmentListScreenState extends State<DepartmentListScreen> {
   Widget build(BuildContext context) {
     final deptProvider = context.watch<DepartmentProvider>();
     return Scaffold(
-      appBar: AppBar(title: const Text('Department Master')),
+      appBar: AppBar(
+        title: const Text('Department Master'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          onPressed: () => context.go('/profile'),
+        ),
+      ),
       body: deptProvider.isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView.builder(
@@ -98,9 +105,7 @@ class _DepartmentListScreenState extends State<DepartmentListScreen> {
                 final dept = deptProvider.departments[index];
                 return Card(
                   child: ListTile(
-                    leading: const CircleAvatar(
-                      child: Icon(Icons.business),
-                    ),
+                    leading: const CircleAvatar(child: Icon(Icons.business)),
                     title: Text(dept.name),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,

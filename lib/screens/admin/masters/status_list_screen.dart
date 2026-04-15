@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:office_assets_app/models/status.dart';
 import 'package:office_assets_app/providers/status_provider.dart';
@@ -12,7 +13,6 @@ class StatusListScreen extends StatefulWidget {
 }
 
 class _StatusListScreenState extends State<StatusListScreen> {
-
   @override
   void initState() {
     super.initState();
@@ -24,7 +24,9 @@ class _StatusListScreenState extends State<StatusListScreen> {
   void _showStatusDialog([Status? status]) {
     final isEditing = status != null;
     final nameCtrl = TextEditingController(text: status?.name ?? '');
-    final colorCtrl = TextEditingController(text: status?.color ?? '0xFF9E9E9E');
+    final colorCtrl = TextEditingController(
+      text: status?.color ?? '0xFF9E9E9E',
+    );
 
     showDialog(
       context: context,
@@ -41,7 +43,9 @@ class _StatusListScreenState extends State<StatusListScreen> {
               const SizedBox(height: 8),
               TextField(
                 controller: colorCtrl,
-                decoration: const InputDecoration(labelText: 'Color (Hex) e.g. 0xFF...'),
+                decoration: const InputDecoration(
+                  labelText: 'Color (Hex) e.g. 0xFF...',
+                ),
               ),
             ],
           ),
@@ -54,25 +58,29 @@ class _StatusListScreenState extends State<StatusListScreen> {
               onPressed: () async {
                 final statProvider = context.read<StatusProvider>();
                 if (isEditing) {
-                  await statProvider.updateStatus(Status(
-                    id: status.id,
-                    name: nameCtrl.text.trim(),
-                    color: colorCtrl.text.trim(),
-                  ));
+                  await statProvider.updateStatus(
+                    Status(
+                      id: status.id,
+                      name: nameCtrl.text.trim(),
+                      color: colorCtrl.text.trim(),
+                    ),
+                  );
                 } else {
-                  await statProvider.addStatus(Status(
-                    id: '',
-                    name: nameCtrl.text.trim(),
-                    color: colorCtrl.text.trim(),
-                  ));
+                  await statProvider.addStatus(
+                    Status(
+                      id: '',
+                      name: nameCtrl.text.trim(),
+                      color: colorCtrl.text.trim(),
+                    ),
+                  );
                 }
                 if (context.mounted) Navigator.pop(ctx);
               },
               child: const Text('Save'),
-            )
+            ),
           ],
         );
-      }
+      },
     );
   }
 
@@ -83,14 +91,17 @@ class _StatusListScreenState extends State<StatusListScreen> {
         title: const Text('Delete Status'),
         content: Text('Delete "${status.name}"?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           TextButton(
-            onPressed: () => Navigator.pop(ctx, true), 
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: AppTheme.dangerColor),
             child: const Text('Delete'),
           ),
         ],
-      )
+      ),
     );
     if (confirm == true && mounted) {
       await context.read<StatusProvider>().deleteStatus(status.id);
@@ -101,7 +112,13 @@ class _StatusListScreenState extends State<StatusListScreen> {
   Widget build(BuildContext context) {
     final statProvider = context.watch<StatusProvider>();
     return Scaffold(
-      appBar: AppBar(title: const Text('Status Master')),
+      appBar: AppBar(
+        title: const Text('Status Master'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          onPressed: () => context.go('/profile'),
+        ),
+      ),
       body: statProvider.isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView.builder(
@@ -126,7 +143,7 @@ class _StatusListScreenState extends State<StatusListScreen> {
                         IconButton(
                           icon: const Icon(Icons.delete, color: Colors.red),
                           onPressed: () => _confirmDelete(s),
-                        )
+                        ),
                       ],
                     ),
                   ),

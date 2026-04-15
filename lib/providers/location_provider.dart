@@ -8,7 +8,7 @@ class LocationProvider extends ChangeNotifier {
   final ApiService _apiService;
 
   List<Location> _locations = [];
-  bool _isLoading = false;
+  bool _isLoading = true;
   String? _error;
 
   LocationProvider(this._apiService);

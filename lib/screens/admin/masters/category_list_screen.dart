@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:office_assets_app/models/category.dart';
 import 'package:office_assets_app/providers/category_provider.dart';
@@ -12,7 +13,6 @@ class CategoryListScreen extends StatefulWidget {
 }
 
 class _CategoryListScreenState extends State<CategoryListScreen> {
-
   @override
   void initState() {
     super.initState();
@@ -24,7 +24,9 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
   void _showCategoryDialog([Category? category]) {
     final isEditing = category != null;
     final nameCtrl = TextEditingController(text: category?.name ?? '');
-    final colorCtrl = TextEditingController(text: category?.color ?? '0xFF9E9E9E');
+    final colorCtrl = TextEditingController(
+      text: category?.color ?? '0xFF9E9E9E',
+    );
     final iconCtrl = TextEditingController(text: category?.icon ?? 'devices');
 
     showDialog(
@@ -42,12 +44,16 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
               const SizedBox(height: 8),
               TextField(
                 controller: colorCtrl,
-                decoration: const InputDecoration(labelText: 'Color (Hex) e.g. 0xFF...'),
+                decoration: const InputDecoration(
+                  labelText: 'Color (Hex) e.g. 0xFF...',
+                ),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: iconCtrl,
-                decoration: const InputDecoration(labelText: 'Icon String e.g. laptop'),
+                decoration: const InputDecoration(
+                  labelText: 'Icon String e.g. laptop',
+                ),
               ),
             ],
           ),
@@ -60,27 +66,31 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
               onPressed: () async {
                 final catProvider = context.read<CategoryProvider>();
                 if (isEditing) {
-                  await catProvider.updateCategory(Category(
-                    id: category.id,
-                    name: nameCtrl.text.trim(),
-                    color: colorCtrl.text.trim(),
-                    icon: iconCtrl.text.trim(),
-                  ));
+                  await catProvider.updateCategory(
+                    Category(
+                      id: category.id,
+                      name: nameCtrl.text.trim(),
+                      color: colorCtrl.text.trim(),
+                      icon: iconCtrl.text.trim(),
+                    ),
+                  );
                 } else {
-                  await catProvider.addCategory(Category(
-                    id: '',
-                    name: nameCtrl.text.trim(),
-                    color: colorCtrl.text.trim(),
-                    icon: iconCtrl.text.trim(),
-                  ));
+                  await catProvider.addCategory(
+                    Category(
+                      id: '',
+                      name: nameCtrl.text.trim(),
+                      color: colorCtrl.text.trim(),
+                      icon: iconCtrl.text.trim(),
+                    ),
+                  );
                 }
                 if (context.mounted) Navigator.pop(ctx);
               },
               child: const Text('Save'),
-            )
+            ),
           ],
         );
-      }
+      },
     );
   }
 
@@ -91,14 +101,17 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
         title: const Text('Delete Category'),
         content: Text('Delete "${category.name}"?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           TextButton(
-            onPressed: () => Navigator.pop(ctx, true), 
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: AppTheme.dangerColor),
             child: const Text('Delete'),
           ),
         ],
-      )
+      ),
     );
     if (confirm == true && mounted) {
       await context.read<CategoryProvider>().deleteCategory(category.id);
@@ -109,7 +122,13 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
   Widget build(BuildContext context) {
     final catProvider = context.watch<CategoryProvider>();
     return Scaffold(
-      appBar: AppBar(title: const Text('Category Master')),
+      appBar: AppBar(
+        title: const Text('Category Master'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          onPressed: () => context.go('/profile'),
+        ),
+      ),
       body: catProvider.isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView.builder(
@@ -135,7 +154,7 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
                         IconButton(
                           icon: const Icon(Icons.delete, color: Colors.red),
                           onPressed: () => _confirmDelete(c),
-                        )
+                        ),
                       ],
                     ),
                   ),

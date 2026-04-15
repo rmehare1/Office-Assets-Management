@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:office_assets_app/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:office_assets_app/models/category.dart';
 import 'package:office_assets_app/providers/asset_provider.dart';
 import 'package:office_assets_app/providers/status_provider.dart';
 import 'package:office_assets_app/providers/category_provider.dart';
 import 'package:office_assets_app/providers/ticket_provider.dart';
+import 'package:office_assets_app/providers/alert_provider.dart';
 import 'package:office_assets_app/widgets/asset_card.dart';
 import 'package:office_assets_app/widgets/stat_card.dart';
 import 'package:office_assets_app/widgets/staggered_list_item.dart';
@@ -68,6 +70,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         context.read<StatusProvider>().loadStatuses();
       }
       context.read<TicketProvider>().loadAllTickets();
+      context.read<AlertProvider>().loadAlerts();
     });
 
     _checkTutorial();
@@ -217,6 +220,79 @@ class _DashboardScreenState extends State<DashboardScreen>
                         ],
                       ),
                       const SizedBox(height: 12),
+                      // Scan Asset quick action
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          gradient: LinearGradient(
+                            colors: [
+                              colors.primary.withValues(alpha: 0.15),
+                              colors.primary.withValues(alpha: 0.05),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          border: Border.all(
+                            color: colors.primary.withValues(alpha: 0.2),
+                            width: 1,
+                          ),
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => context.go('/scanner'),
+                            borderRadius: BorderRadius.circular(16),
+                            child: Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: colors.primary.withValues(
+                                        alpha: 0.2,
+                                      ),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.qr_code_scanner_rounded,
+                                      color: colors.primary,
+                                      size: 28,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Scan Asset',
+                                          style: textTheme.titleMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                        ),
+                                        Text(
+                                          'Scan QR code or barcode to register or lookup an asset',
+                                          style: textTheme.bodySmall?.copyWith(
+                                            color: colors.onSurfaceVariant,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: colors.primary,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       _RecentTicketsBanner(
                         pendingCount: context
                             .watch<TicketProvider>()
@@ -228,6 +304,26 @@ class _DashboardScreenState extends State<DashboardScreen>
                             .allTickets
                             .length,
                         onTap: () => context.go('/admin/tickets'),
+                      ),
+                      const SizedBox(height: 12),
+                      Consumer<AlertProvider>(
+                        builder: (context, alertProvider, child) {
+                          final pendingAlerts = alertProvider.alerts
+                              .where(
+                                (a) =>
+                                    a.status == 'Pending' ||
+                                    a.status == 'Notified',
+                              )
+                              .toList();
+
+                          if (pendingAlerts.isEmpty)
+                            return const SizedBox.shrink();
+
+                          return _RecentAlertsBanner(
+                            count: pendingAlerts.length,
+                            onTap: () => context.go('/alerts'),
+                          );
+                        },
                       ),
                       const SizedBox(height: 24),
 
@@ -471,6 +567,112 @@ class _RecentTicketsBanner extends StatelessWidget {
                           Icons.chevron_right,
                           size: 14,
                           color: Colors.orange,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RecentAlertsBanner extends StatelessWidget {
+  final int count;
+  final VoidCallback onTap;
+
+  const _RecentAlertsBanner({required this.count, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).colorScheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.dangerColor.withValues(alpha: 0.15),
+            AppTheme.dangerColor.withValues(alpha: 0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(
+          color: AppTheme.dangerColor.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.dangerColor.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.warning_amber_rounded,
+                    color: AppTheme.dangerColor,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Maintenance Alerts',
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'You have $count asset(s) overdue for maintenance',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '$count',
+                      style: textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: AppTheme.dangerColor,
+                        letterSpacing: -1,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          'View',
+                          style: textTheme.labelSmall?.copyWith(
+                            color: AppTheme.dangerColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const Icon(
+                          Icons.chevron_right,
+                          size: 14,
+                          color: AppTheme.dangerColor,
                         ),
                       ],
                     ),

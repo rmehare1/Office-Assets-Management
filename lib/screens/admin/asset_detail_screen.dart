@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:office_assets_app/models/asset.dart';
 import 'package:office_assets_app/providers/asset_provider.dart';
 import 'package:office_assets_app/providers/auth_provider.dart';
+import 'package:office_assets_app/providers/alert_provider.dart';
 import 'package:office_assets_app/theme/app_theme.dart';
 import 'package:office_assets_app/widgets/status_badge.dart';
 
@@ -32,8 +35,14 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
   Future<void> _fetchFromApi() async {
     setState(() => _isFetching = true);
     try {
-      final asset = await context.read<AuthProvider>().apiService.getAsset(widget.assetId);
-      if (mounted) setState(() { _fetchedAsset = asset; _isFetching = false; });
+      final asset = await context.read<AuthProvider>().apiService.getAsset(
+        widget.assetId,
+      );
+      if (mounted)
+        setState(() {
+          _fetchedAsset = asset;
+          _isFetching = false;
+        });
     } catch (e) {
       if (mounted) setState(() => _isFetching = false);
     }
@@ -73,7 +82,8 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
     final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
     final isAdmin = context.watch<AuthProvider>().isAdmin;
-    final asset = context.watch<AssetProvider>().getById(widget.assetId) ?? _fetchedAsset;
+    final asset =
+        context.watch<AssetProvider>().getById(widget.assetId) ?? _fetchedAsset;
 
     if (_isFetching) {
       return Scaffold(
@@ -93,14 +103,16 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
       appBar: AppBar(
         title: const Text('Asset Details'),
         actions: [
-          if (isAdmin) IconButton(
-            icon: const Icon(Icons.edit_outlined),
-            onPressed: () => context.go('/assets/${widget.assetId}/edit'),
-          ),
-          if (isAdmin) IconButton(
-            icon: const Icon(Icons.delete_outlined),
-            onPressed: () => _confirmDelete(context),
-          ),
+          if (isAdmin)
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () => context.go('/assets/${widget.assetId}/edit'),
+            ),
+          if (isAdmin)
+            IconButton(
+              icon: const Icon(Icons.delete_outlined),
+              onPressed: () => _confirmDelete(context),
+            ),
         ],
       ),
       body: ListView(
@@ -134,12 +146,98 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
-                  StatusBadge(statusName: asset.statusName, statusColorStr: asset.statusColorStr, fontSize: 14),
+                  StatusBadge(
+                    statusName: asset.statusName,
+                    statusColorStr: asset.statusColorStr,
+                    fontSize: 14,
+                  ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 16),
+
+          Consumer<AlertProvider>(
+            builder: (context, alertProvider, child) {
+              final activeAlerts = alertProvider.alerts
+                  .where(
+                    (a) =>
+                        a.assetId == widget.assetId &&
+                        (a.status == 'Pending' || a.status == 'Notified'),
+                  )
+                  .toList();
+              if (activeAlerts.isEmpty) return const SizedBox.shrink();
+
+              final alert = activeAlerts.first;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.dangerColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppTheme.dangerColor.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.warning_amber_rounded,
+                          color: AppTheme.dangerColor,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Maintenance Overdue',
+                          style: textTheme.titleMedium?.copyWith(
+                            color: AppTheme.dangerColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(alert.message, style: textTheme.bodyMedium),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppTheme.dangerColor,
+                        ),
+                        onPressed: () async {
+                          try {
+                            await alertProvider.updateAlertStatus(
+                              alert.id,
+                              'Completed',
+                            );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Asset marked as serviced'),
+                                ),
+                              );
+                              // Refresh asset to get updated last_service_date
+                              _fetchFromApi();
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Failed to update: $e')),
+                              );
+                            }
+                          }
+                        },
+                        child: const Text('Mark as Serviced'),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
 
           Card(
             child: Padding(
@@ -181,13 +279,20 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
                     label: 'Purchase Price',
                     value: '${asset.purchasePrice.toStringAsFixed(2)}',
                   ),
+                  if (asset.lastServiceDate != null)
+                    _DetailRow(
+                      icon: Icons.build_circle_outlined,
+                      label: 'Last Service Date',
+                      value:
+                          '${asset.lastServiceDate!.month}/${asset.lastServiceDate!.day}/${asset.lastServiceDate!.year}',
+                    ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 16),
 
-          if (asset.assignedTo.isNotEmpty)
+          if (asset.assignedToName.isNotEmpty)
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(20),
@@ -212,7 +317,7 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
                         ),
                         const SizedBox(width: 12),
                         Text(
-                          asset.assignedTo,
+                          asset.assignedToName,
                           style: textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w500,
                             color: colors.onSurface,
@@ -224,7 +329,7 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
                 ),
               ),
             ),
-          if (asset.assignedTo.isNotEmpty) const SizedBox(height: 16),
+          if (asset.assignedToName.isNotEmpty) const SizedBox(height: 16),
 
           if (asset.notes != null && asset.notes!.isNotEmpty)
             Card(
@@ -254,25 +359,118 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
             ),
           const SizedBox(height: 24),
 
-          OutlinedButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Report issue feature coming soon'),
+          // QR Code Section (Admin only)
+          if (isAdmin)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.qr_code_2_rounded,
+                          size: 20,
+                          color: colors.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Asset QR Label',
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: colors.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: colors.outline.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: QrImageView(
+                        data: asset.toQrJson(),
+                        version: QrVersions.auto,
+                        size: 200,
+                        backgroundColor: Colors.white,
+                        eyeStyle: const QrEyeStyle(
+                          eyeShape: QrEyeShape.circle,
+                          color: Color(0xFF1E3A5F),
+                        ),
+                        dataModuleStyle: const QrDataModuleStyle(
+                          dataModuleShape: QrDataModuleShape.circle,
+                          color: Color(0xFF1E3A5F),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      asset.serialNumber,
+                      style: textTheme.bodySmall?.copyWith(
+                        fontFamily: 'monospace',
+                        fontWeight: FontWeight.w600,
+                        color: colors.onSurfaceVariant,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              Clipboard.setData(
+                                ClipboardData(text: asset.toQrJson()),
+                              );
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('QR data copied to clipboard'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.copy_rounded, size: 18),
+                            label: const Text('Copy QR Data'),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              );
-            },
-            icon: const Icon(Icons.flag_outlined),
-            label: const Text('Report Issue'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppTheme.warningColor,
-              side: const BorderSide(color: AppTheme.warningColor),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
               ),
             ),
-          ),
+          if (isAdmin) const SizedBox(height: 16),
+
+          // OutlinedButton.icon(
+          //   onPressed: () {
+          //     ScaffoldMessenger.of(context).showSnackBar(
+          //       const SnackBar(
+          //         content: Text('Report issue feature coming soon'),
+          //       ),
+          //     );
+          //   },
+          //   icon: const Icon(Icons.flag_outlined),
+          //   label: const Text('Report Issue'),
+          //   style: OutlinedButton.styleFrom(
+          //     foregroundColor: AppTheme.warningColor,
+          //     side: const BorderSide(color: AppTheme.warningColor),
+          //     padding: const EdgeInsets.symmetric(vertical: 16),
+          //     shape: RoundedRectangleBorder(
+          //       borderRadius: BorderRadius.circular(12),
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );

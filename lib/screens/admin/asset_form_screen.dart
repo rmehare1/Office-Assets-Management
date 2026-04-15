@@ -11,8 +11,9 @@ import 'package:office_assets_app/services/api_exception.dart';
 
 class AssetFormScreen extends StatefulWidget {
   final String? assetId;
+  final Map<String, dynamic>? scannedData;
 
-  const AssetFormScreen({super.key, this.assetId});
+  const AssetFormScreen({super.key, this.assetId, this.scannedData});
 
   bool get isEditing => assetId != null;
 
@@ -35,6 +36,7 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
   String? _locationId;
   String? _locationName;
   DateTime _purchaseDate = DateTime.now();
+  DateTime? _lastServiceDate;
   bool _isSubmitting = false;
 
   @override
@@ -58,10 +60,33 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
       _statusId = asset.statusId;
       _statusName = asset.statusName;
       _purchaseDate = asset.purchaseDate;
+      _lastServiceDate = asset.lastServiceDate;
       _locationId = asset.locationId.isNotEmpty ? asset.locationId : null;
       _locationName = asset.locationName.isNotEmpty ? asset.locationName : null;
-      if (asset.statusName.toLowerCase() == 'assigned' && asset.assignedTo.isNotEmpty) {
+      if (asset.assignedTo.isNotEmpty) {
         _assignedToUserId = asset.assignedTo;
+      }
+    }
+
+    // Apply scanned data if provided (from QR/barcode scanner)
+    final scanned = widget.scannedData;
+    if (scanned != null && asset == null) {
+      if (scanned['serial_number'] != null) {
+        _serialController.text = scanned['serial_number'].toString();
+      }
+      if (scanned['name'] != null) {
+        _nameController.text = scanned['name'].toString();
+      }
+      if (scanned['purchase_price'] != null) {
+        _priceController.text = scanned['purchase_price'].toString();
+      }
+      if (scanned['notes'] != null) {
+        _notesController.text = scanned['notes'].toString();
+      }
+      if (scanned['purchase_date'] != null) {
+        try {
+          _purchaseDate = DateTime.parse(scanned['purchase_date'].toString());
+        } catch (_) {}
       }
     }
 
@@ -76,24 +101,10 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
       if (context.read<LocationProvider>().locations.isEmpty) {
         context.read<LocationProvider>().loadLocations();
       }
-      userProvider.loadUsers().then((_) {
-        if (!mounted) return;
-        if (asset != null &&
-            asset.statusName.toLowerCase() == 'assigned' &&
-            asset.assignedTo.isNotEmpty) {
-          final users = userProvider.users;
-          final matchById = users.where((u) => u.id == asset.assignedTo);
-          if (matchById.isNotEmpty) {
-            setState(() => _assignedToUserId = matchById.first.id);
-          } else {
-            final matchByName =
-                users.where((u) => u.name == asset.assignedTo);
-            if (matchByName.isNotEmpty) {
-              setState(() => _assignedToUserId = matchByName.first.id);
-            }
-          }
-        }
-      });
+
+      // Auto-select category/status/location from scanned data after masters load
+      _applyScannedMasterData();
+      userProvider.loadUsers();
     });
   }
 
@@ -106,6 +117,54 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
     super.dispose();
   }
 
+  /// Matches scanned category/status/location names to their IDs after master data loads.
+  void _applyScannedMasterData() {
+    final scanned = widget.scannedData;
+    if (scanned == null || widget.isEditing) return;
+
+    // Match category by name
+    if (scanned['category'] != null && _categoryId == null) {
+      final cats = context.read<CategoryProvider>().categories;
+      final match = cats.where(
+        (c) => c.name.toLowerCase() == scanned['category'].toString().toLowerCase(),
+      );
+      if (match.isNotEmpty) {
+        setState(() {
+          _categoryId = match.first.id;
+          _categoryName = match.first.name;
+        });
+      }
+    }
+
+    // Match status by name
+    if (scanned['status'] != null && _statusId == null) {
+      final stats = context.read<StatusProvider>().statuses;
+      final match = stats.where(
+        (s) => s.name.toLowerCase() == scanned['status'].toString().toLowerCase(),
+      );
+      if (match.isNotEmpty) {
+        setState(() {
+          _statusId = match.first.id;
+          _statusName = match.first.name;
+        });
+      }
+    }
+
+    // Match location by name
+    if (scanned['location'] != null && _locationId == null) {
+      final locs = context.read<LocationProvider>().locations;
+      final match = locs.where(
+        (l) => l.name.toLowerCase() == scanned['location'].toString().toLowerCase(),
+      );
+      if (match.isNotEmpty) {
+        setState(() {
+          _locationId = match.first.id;
+          _locationName = match.first.name;
+        });
+      }
+    }
+  }
+
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -115,6 +174,18 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
     );
     if (picked != null) {
       setState(() => _purchaseDate = picked);
+    }
+  }
+
+  Future<void> _pickServiceDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _lastServiceDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() => _lastServiceDate = picked);
     }
   }
 
@@ -136,12 +207,14 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
       categoryName: _categoryName ?? '',
       statusId: _statusId!,
       statusName: _statusName ?? '',
-      assignedTo: (_statusName?.toLowerCase() == 'assigned') ? (_assignedToUserId ?? '') : '',
+      assignedTo: _assignedToUserId ?? '',
+      assignedToName: '', // Backend will populate this if needed
       serialNumber: _serialController.text.trim(),
       locationId: _locationId!,
       locationName: _locationName ?? '',
       purchaseDate: _purchaseDate,
       purchasePrice: double.parse(_priceController.text.trim()),
+      lastServiceDate: _lastServiceDate,
       notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
     );
 
@@ -175,7 +248,7 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
       appBar: AppBar(
         title: Text(widget.isEditing ? 'Edit Asset' : 'Add Asset'),
       ),
-      body: (catProvider.isLoading || statProvider.isLoading || locProvider.isLoading)
+      body: (catProvider.isLoading || statProvider.isLoading || locProvider.isLoading || context.watch<UserProvider>().isLoading)
       ? const Center(child: CircularProgressIndicator()) 
       : Form(
         key: _formKey,
@@ -193,9 +266,16 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _serialController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Serial Number',
-                prefixIcon: Icon(Icons.qr_code),
+                prefixIcon: const Icon(Icons.qr_code),
+                suffixIcon: widget.isEditing
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.qr_code_scanner_rounded),
+                        tooltip: 'Scan QR/Barcode',
+                        onPressed: () => context.go('/scanner'),
+                      ),
               ),
               validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
             ),
@@ -310,6 +390,24 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
                 child: Text(
                   '${_purchaseDate.month}/${_purchaseDate.day}/${_purchaseDate.year}',
                   style: textTheme.bodyLarge?.copyWith(color: colors.onSurface),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            InkWell(
+              onTap: _pickServiceDate,
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'Last Service Date (Optional)',
+                  prefixIcon: Icon(Icons.build_circle_outlined),
+                ),
+                child: Text(
+                  _lastServiceDate != null 
+                      ? '${_lastServiceDate!.month}/${_lastServiceDate!.day}/${_lastServiceDate!.year}'
+                      : 'Not serviced yet',
+                  style: textTheme.bodyLarge?.copyWith(
+                    color: _lastServiceDate != null ? colors.onSurface : colors.onSurfaceVariant,
+                  ),
                 ),
               ),
             ),

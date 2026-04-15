@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:office_assets_app/utils/app_functions.dart';
 import 'package:provider/provider.dart';
 import 'package:office_assets_app/providers/auth_provider.dart';
 import 'package:office_assets_app/providers/theme_provider.dart';
@@ -311,7 +312,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    user.role,
+                    user.role.capitalize(),
                     style: textTheme.bodyLarge?.copyWith(
                       color: colors.onSurfaceVariant,
                     ),

@@ -103,6 +103,18 @@ class AssetProvider extends ChangeNotifier {
     }
   }
 
+  /// Lookup an asset by scanned barcode/QR code.
+  /// Returns null if no matching asset is found.
+  Future<Asset?> lookupByCode(String code) async {
+    try {
+      return await _apiService.lookupAssetByCode(code);
+    } on ApiException catch (e) {
+      _error = e.message;
+      notifyListeners();
+      return null;
+    }
+  }
+
   Future<void> addAsset(Asset asset) async {
     try {
       final created = await _apiService.createAsset(asset);

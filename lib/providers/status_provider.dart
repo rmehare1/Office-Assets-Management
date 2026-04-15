@@ -8,7 +8,7 @@ class StatusProvider extends ChangeNotifier {
   final ApiService _apiService;
 
   List<Status> _statuses = [];
-  bool _isLoading = false;
+  bool _isLoading = true;
   String? _error;
 
   StatusProvider(this._apiService);

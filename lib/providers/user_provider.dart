@@ -5,7 +5,7 @@ import 'package:office_assets_app/services/api_service.dart';
 class UserProvider extends ChangeNotifier {
   final ApiService _apiService;
   List<AppUser> _users = [];
-  bool _isLoading = false;
+  bool _isLoading = true;
 
   UserProvider(this._apiService);
 

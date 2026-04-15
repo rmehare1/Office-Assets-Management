@@ -49,16 +49,25 @@ class _HomeScreenState extends State<HomeScreen> {
         onTap: (index) {
           if (isAdmin) {
             switch (index) {
-              case 0: context.go('/dashboard');
-              case 1: context.go('/assets');
-              case 2: context.go('/profile');
-              case 3: context.go('/users');
+              case 0:
+                context.go('/dashboard');
+              case 1:
+                context.go('/assets');
+              case 2:
+                context.go('/profile');
+              case 3:
+                context.go('/users');
+              case 4:
+                context.go('/users-assets');
             }
           } else {
             switch (index) {
-              case 0: context.go('/my-assets');
-              case 1: context.go('/tickets');
-              case 2: context.go('/profile');
+              case 0:
+                context.go('/my-assets');
+              case 1:
+                context.go('/tickets');
+              case 2:
+                context.go('/profile');
             }
           }
         },

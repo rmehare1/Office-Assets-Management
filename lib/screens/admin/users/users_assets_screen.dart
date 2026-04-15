@@ -6,14 +6,15 @@ import 'package:office_assets_app/providers/auth_provider.dart';
 import 'package:office_assets_app/theme/app_theme.dart';
 import 'package:office_assets_app/widgets/asset_card.dart';
 
-class MyAssetsScreen extends StatefulWidget {
-  const MyAssetsScreen({super.key});
+class UsersAssetsScreen extends StatefulWidget {
+  final String userId;
+  const UsersAssetsScreen({super.key, required this.userId});
 
   @override
-  State<MyAssetsScreen> createState() => _MyAssetsScreenState();
+  State<UsersAssetsScreen> createState() => _UsersAssetsScreenState();
 }
 
-class _MyAssetsScreenState extends State<MyAssetsScreen> {
+class _UsersAssetsScreenState extends State<UsersAssetsScreen> {
   List<Asset> _assets = [];
   bool _isLoading = false;
   String? _error;
@@ -30,9 +31,9 @@ class _MyAssetsScreenState extends State<MyAssetsScreen> {
       _error = null;
     });
     try {
-      final userId = context.read<AuthProvider>().currentUser!.id;
+      // final userId = context.read<AuthProvider>().currentUser!.id;
       final assets = await context.read<AuthProvider>().apiService.getAssets(
-        assignedToUserId: userId,
+        assignedToUserId: this.widget.userId!,
       );
       if (mounted)
         setState(() {
@@ -55,10 +56,14 @@ class _MyAssetsScreenState extends State<MyAssetsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Assets'),
+        title: const Text('Users Assets'),
         actions: [
           IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
         ],
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          onPressed: () => context.go('/users'),
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

@@ -144,6 +144,7 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
       notes: _notesController.text.trim().isEmpty
           ? null
           : _notesController.text.trim(),
+      assignedToName: '',
     );
 
     try {

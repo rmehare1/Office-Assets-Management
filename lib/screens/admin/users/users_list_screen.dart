@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:office_assets_app/models/user.dart';
 import 'package:office_assets_app/providers/auth_provider.dart';
@@ -28,11 +29,18 @@ class _UsersListScreenState extends State<UsersListScreen> {
       _error = null;
     });
     try {
-      final users =
-          await context.read<AuthProvider>().apiService.getUsers();
-      if (mounted) setState(() { _users = users; _isLoading = false; });
+      final users = await context.read<AuthProvider>().apiService.getUsers();
+      if (mounted)
+        setState(() {
+          _users = users;
+          _isLoading = false;
+        });
     } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _isLoading = false; });
+      if (mounted)
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
     }
   }
 
@@ -71,13 +79,16 @@ class _UsersListScreenState extends State<UsersListScreen> {
     if (confirmed == true && selected != user.role) {
       if (!mounted) return;
       try {
-        await context.read<AuthProvider>().apiService.updateUserRole(user.id, selected);
+        await context.read<AuthProvider>().apiService.updateUserRole(
+          user.id,
+          selected,
+        );
         if (mounted) _loadUsers();
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to update role: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Failed to update role: $e')));
         }
       }
     }
@@ -92,91 +103,105 @@ class _UsersListScreenState extends State<UsersListScreen> {
       appBar: AppBar(
         title: const Text('Users'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadUsers,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadUsers),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('Error: $_error',
-                          style: textTheme.bodyMedium
-                              ?.copyWith(color: AppTheme.dangerColor)),
-                      const SizedBox(height: 12),
-                      FilledButton(
-                          onPressed: _loadUsers, child: const Text('Retry')),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Error: $_error',
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.dangerColor,
+                    ),
                   ),
-                )
-              : _users.isEmpty
-                  ? const Center(child: Text('No users found'))
-                  : ListView.separated(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _users.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
-                      itemBuilder: (context, index) {
-                        final user = _users[index];
-                        final initials = user.name
-                            .split(' ')
-                            .take(2)
-                            .map((w) => w.isNotEmpty ? w[0] : '')
-                            .join()
-                            .toUpperCase();
-                        final isAdmin = user.role == 'admin';
-                        return Card(
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
-                            leading: CircleAvatar(
-                              backgroundColor:
-                                  colors.primary.withValues(alpha: 0.15),
-                              child: Text(initials,
-                                  style: TextStyle(
-                                      color: colors.primary,
-                                      fontWeight: FontWeight.bold)),
-                            ),
-                            title: Text(user.name,
-                                style: textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.w600)),
-                            subtitle: Text(user.email,
-                                style: textTheme.bodySmall?.copyWith(
-                                    color: colors.onSurfaceVariant)),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Chip(
-                                  label: Text(
-                                    isAdmin ? 'Admin' : 'User',
-                                    style: textTheme.labelSmall?.copyWith(
-                                      color: isAdmin
-                                          ? colors.onPrimary
-                                          : colors.onSurfaceVariant,
-                                    ),
-                                  ),
-                                  backgroundColor: isAdmin
-                                      ? colors.primary
-                                      : colors.surfaceContainerHighest,
-                                  padding: EdgeInsets.zero,
-                                  visualDensity: VisualDensity.compact,
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.edit_outlined,
-                                      size: 20),
-                                  onPressed: () => _changeRole(user),
-                                  tooltip: 'Change role',
-                                ),
-                              ],
+                  const SizedBox(height: 12),
+                  FilledButton(
+                    onPressed: _loadUsers,
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            )
+          : _users.isEmpty
+          ? const Center(child: Text('No users found'))
+          : ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: _users.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final user = _users[index];
+                final initials = user.name
+                    .split(' ')
+                    .take(2)
+                    .map((w) => w.isNotEmpty ? w[0] : '')
+                    .join()
+                    .toUpperCase();
+                final isAdmin = user.role == 'admin';
+                return Card(
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    leading: CircleAvatar(
+                      backgroundColor: colors.primary.withValues(alpha: 0.15),
+                      child: Text(
+                        initials,
+                        style: TextStyle(
+                          color: colors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    title: InkWell(
+                      onTap: () => context.go('/users-assets/${user.id}'),
+                      child: Text(
+                        user.name,
+                        style: textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    subtitle: Text(
+                      user.email,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Chip(
+                          label: Text(
+                            isAdmin ? 'Admin' : 'User',
+                            style: textTheme.labelSmall?.copyWith(
+                              color: isAdmin
+                                  ? colors.onPrimary
+                                  : colors.onSurfaceVariant,
                             ),
                           ),
-                        );
-                      },
+                          backgroundColor: isAdmin
+                              ? colors.primary
+                              : colors.surfaceContainerHighest,
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined, size: 20),
+                          onPressed: () => _changeRole(user),
+                          tooltip: 'Change role',
+                        ),
+                      ],
                     ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }

@@ -148,13 +148,19 @@ class AssetDetailScreen extends StatelessWidget {
                     label: 'Purchase Price',
                     value: asset.purchasePrice.toStringAsFixed(2),
                   ),
+                  if (asset.lastServiceDate != null)
+                    _DetailRow(
+                      icon: Icons.build_circle_outlined,
+                      label: 'Last Service Date',
+                      value: '${asset.lastServiceDate!.month}/${asset.lastServiceDate!.day}/${asset.lastServiceDate!.year}',
+                    ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 16),
 
-          if (asset.assignedTo.isNotEmpty)
+          if (asset.assignedToName.isNotEmpty)
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(20),
@@ -179,7 +185,7 @@ class AssetDetailScreen extends StatelessWidget {
                         ),
                         const SizedBox(width: 12),
                         Text(
-                          asset.assignedTo,
+                          asset.assignedToName,
                           style: textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w500,
                             color: colors.onSurface,
@@ -191,7 +197,7 @@ class AssetDetailScreen extends StatelessWidget {
                 ),
               ),
             ),
-          if (asset.assignedTo.isNotEmpty) const SizedBox(height: 16),
+          if (asset.assignedToName.isNotEmpty) const SizedBox(height: 16),
 
           if (asset.notes != null && asset.notes!.isNotEmpty)
             Card(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:office_assets_app/models/location.dart';
 import 'package:office_assets_app/providers/location_provider.dart';
@@ -12,7 +13,6 @@ class LocationListScreen extends StatefulWidget {
 }
 
 class _LocationListScreenState extends State<LocationListScreen> {
-
   @override
   void initState() {
     super.initState();
@@ -43,15 +43,13 @@ class _LocationListScreenState extends State<LocationListScreen> {
               onPressed: () async {
                 final locProvider = context.read<LocationProvider>();
                 if (isEditing) {
-                  await locProvider.updateLocation(Location(
-                    id: location.id,
-                    name: nameCtrl.text.trim(),
-                  ));
+                  await locProvider.updateLocation(
+                    Location(id: location.id, name: nameCtrl.text.trim()),
+                  );
                 } else {
-                  await locProvider.addLocation(Location(
-                    id: '',
-                    name: nameCtrl.text.trim(),
-                  ));
+                  await locProvider.addLocation(
+                    Location(id: '', name: nameCtrl.text.trim()),
+                  );
                 }
                 if (context.mounted) Navigator.pop(ctx);
               },
@@ -70,7 +68,10 @@ class _LocationListScreenState extends State<LocationListScreen> {
         title: const Text('Delete Location'),
         content: Text('Delete "${location.name}"?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: AppTheme.dangerColor),
@@ -88,7 +89,13 @@ class _LocationListScreenState extends State<LocationListScreen> {
   Widget build(BuildContext context) {
     final locProvider = context.watch<LocationProvider>();
     return Scaffold(
-      appBar: AppBar(title: const Text('Location Master')),
+      appBar: AppBar(
+        title: const Text('Location Master'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          onPressed: () => context.go('/profile'),
+        ),
+      ),
       body: locProvider.isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView.builder(
@@ -98,9 +105,7 @@ class _LocationListScreenState extends State<LocationListScreen> {
                 final loc = locProvider.locations[index];
                 return Card(
                   child: ListTile(
-                    leading: const CircleAvatar(
-                      child: Icon(Icons.location_on),
-                    ),
+                    leading: const CircleAvatar(child: Icon(Icons.location_on)),
                     title: Text(loc.name),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,

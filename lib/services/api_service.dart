@@ -8,6 +8,7 @@ import 'package:office_assets_app/models/location.dart';
 import 'package:office_assets_app/models/status.dart';
 import 'package:office_assets_app/models/ticket.dart';
 import 'package:office_assets_app/models/user.dart';
+import 'package:office_assets_app/models/maintenance_alert.dart';
 import 'api_config.dart';
 import 'token_storage.dart';
 import 'interceptors/auth_interceptor.dart';
@@ -231,6 +232,22 @@ class ApiService {
     });
   }
 
+  /// Lookup an asset by scanned barcode/QR code value.
+  /// Returns null if no asset matches (404).
+  Future<Asset?> lookupAssetByCode(String code) async {
+    try {
+      final response = await _dio.get(
+        '/assets/lookup',
+        queryParameters: {'code': code},
+      );
+      final data = response.data as Map<String, dynamic>;
+      return Asset.fromJson(data['asset'] as Map<String, dynamic>);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
+      rethrow;
+    }
+  }
+
   // ── Users ───────────────────────────────────────────
 
   Future<List<AppUser>> getUsers() async {
@@ -451,5 +468,25 @@ class ApiService {
 
   Future<void> cancelTicket(String id) async {
     return _wrap(() => _dio.patch('/tickets/$id/cancel'));
+  }
+
+  // ── Maintenance Alerts ──────────────────────────────────────────
+
+  Future<List<MaintenanceAlert>> getAlerts() async {
+    return _wrap(() async {
+      final response = await _dio.get('/alerts');
+      final list = response.data['alerts'] as List;
+      return list.map((j) => MaintenanceAlert.fromJson(j as Map<String, dynamic>)).toList();
+    });
+  }
+
+  Future<MaintenanceAlert> updateAlertStatus(String id, String status) async {
+    return _wrap(() async {
+      final response = await _dio.put(
+        '/alerts/$id/status',
+        data: {'status': status},
+      );
+      return MaintenanceAlert.fromJson(response.data['alert'] as Map<String, dynamic>);
+    });
   }
 }
