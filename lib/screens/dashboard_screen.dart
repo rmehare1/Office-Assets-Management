@@ -9,6 +9,7 @@ import 'package:office_assets_app/widgets/asset_card.dart';
 import 'package:office_assets_app/widgets/stat_card.dart';
 import 'package:office_assets_app/widgets/staggered_list_item.dart';
 import 'package:office_assets_app/widgets/tutorial_overlay.dart';
+import 'package:office_assets_app/utils/app_strings.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -69,6 +70,11 @@ class _DashboardScreenState extends State<DashboardScreen>
     });
 
     _checkTutorial();
+
+    String s = "3[a]2[bc]";
+    if (s[0].runtimeType == int) {
+      print("s[0] is integer");
+    }
   }
 
   Future<void> _checkTutorial() async {
@@ -109,13 +115,14 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
     return Colors.grey;
   }
-  
+
   IconData _parseIcon(String? iconStr) {
     if (iconStr == 'laptop') return Icons.computer;
     if (iconStr == 'monitor') return Icons.monitor;
     if (iconStr == 'phone') return Icons.smartphone;
     if (iconStr == 'furniture') return Icons.chair;
     if (iconStr == 'accessory') return Icons.keyboard;
+
     return Icons.devices;
   }
 
@@ -131,8 +138,11 @@ class _DashboardScreenState extends State<DashboardScreen>
     return Stack(
       children: [
         Scaffold(
-          appBar: AppBar(title: const Text('Dashboard')),
-          body: (assetProvider.isLoading || statProvider.isLoading || catProvider.isLoading)
+          appBar: AppBar(title: const Text(AppStrings.dashboard)),
+          body:
+              (assetProvider.isLoading ||
+                  statProvider.isLoading ||
+                  catProvider.isLoading)
               ? const Center(child: CircularProgressIndicator())
               : RefreshIndicator(
                   onRefresh: () async {
@@ -147,7 +157,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         key: _searchKey,
                         onChanged: assetProvider.setSearchQuery,
                         decoration: InputDecoration(
-                          hintText: 'Search assets...',
+                          hintText: AppStrings.searchAssets,
                           prefixIcon: const Icon(Icons.search),
                           suffixIcon: assetProvider.searchQuery.isNotEmpty
                               ? IconButton(
@@ -174,20 +184,25 @@ class _DashboardScreenState extends State<DashboardScreen>
                             GestureDetector(
                               onTap: () => _navigateWithFilter(context, null),
                               child: StatCard(
-                                title: 'Total Assets',
+                                title: AppStrings.totalAssets,
                                 value: '${assetProvider.totalAssets}',
                                 icon: Icons.inventory_2,
                                 color: colors.primary,
                               ),
                             ),
                           ),
-                          ...List.generate(statProvider.statuses.length, (index) {
+                          ...List.generate(statProvider.statuses.length, (
+                            index,
+                          ) {
                             final status = statProvider.statuses[index];
-                            final count = assetProvider.assets.where((a) => a.statusId == status.id).length;
+                            final count = assetProvider.assets
+                                .where((a) => a.statusId == status.id)
+                                .length;
                             return _buildStatCard(
                               index + 1,
                               GestureDetector(
-                                onTap: () => _navigateWithFilter(context, status.id),
+                                onTap: () =>
+                                    _navigateWithFilter(context, status.id),
                                 child: StatCard(
                                   title: status.name,
                                   value: '$count',
@@ -202,7 +217,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       const SizedBox(height: 24),
 
                       Text(
-                        'Categories',
+                        AppStrings.categories,
                         style: textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: colors.onSurface,
@@ -214,23 +229,32 @@ class _DashboardScreenState extends State<DashboardScreen>
                           height: 44,
                           child: ListView(
                             scrollDirection: Axis.horizontal,
-                            children: assetProvider.categoryBreakdown.entries.map((entry) {
-                              final cat = catProvider.categories.firstWhere(
-                                (c) => c.name == entry.key, 
-                                orElse: () => Category(id: '', name: entry.key, icon: 'devices', color: '0xFF9E9E9E')
-                              );
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: Chip(
-                                  avatar: Icon(
-                                    _parseIcon(cat.icon),
-                                    size: 18,
-                                    color: _parseColor(cat.color),
-                                  ),
-                                  label: Text('${entry.key}: ${entry.value}'),
-                                ),
-                              );
-                            }).toList(),
+                            children: assetProvider.categoryBreakdown.entries
+                                .map((entry) {
+                                  final cat = catProvider.categories.firstWhere(
+                                    (c) => c.name == entry.key,
+                                    orElse: () => Category(
+                                      id: '',
+                                      name: entry.key,
+                                      icon: 'devices',
+                                      color: '0xFF9E9E9E',
+                                    ),
+                                  );
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: Chip(
+                                      avatar: Icon(
+                                        _parseIcon(cat.icon),
+                                        size: 18,
+                                        color: _parseColor(cat.color),
+                                      ),
+                                      label: Text(
+                                        '${entry.key}: ${entry.value}',
+                                      ),
+                                    ),
+                                  );
+                                })
+                                .toList(),
                           ),
                         ),
                       const SizedBox(height: 24),
@@ -240,7 +264,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Recent Assets',
+                            AppStrings.recentAssets,
                             style: textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: colors.onSurface,
@@ -248,7 +272,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                           ),
                           if (assetProvider.searchQuery.isNotEmpty)
                             Text(
-                              '${assetProvider.filteredAssets.length} results',
+                              '${assetProvider.filteredAssets.length} ${AppStrings.results}',
                               style: textTheme.bodySmall?.copyWith(
                                 color: colors.onSurfaceVariant,
                               ),
@@ -268,7 +292,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'No assets match your search',
+                                AppStrings.noAssetsMatch,
                                 style: textTheme.bodyMedium?.copyWith(
                                   color: colors.onSurfaceVariant,
                                 ),

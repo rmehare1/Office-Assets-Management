@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:office_assets_app/utils/app_strings.dart';
 
 class SplashScreen extends StatefulWidget {
   final VoidCallback onComplete;
@@ -130,7 +131,7 @@ class _SplashScreenState extends State<SplashScreen>
                   child: Opacity(
                     opacity: _titleOpacity.value,
                     child: Text(
-                      'Office Assets',
+                      AppStrings.appName,
                       style: textTheme.headlineLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: colors.onSurface,
@@ -142,7 +143,7 @@ class _SplashScreenState extends State<SplashScreen>
                 Opacity(
                   opacity: _subtitleOpacity.value,
                   child: Text(
-                    'Manage your workplace equipment',
+                    AppStrings.appSubtitle,
                     style: textTheme.bodyLarge?.copyWith(
                       color: colors.onSurfaceVariant,
                     ),

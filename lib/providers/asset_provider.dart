@@ -7,8 +7,9 @@ class AssetProvider extends ChangeNotifier {
   final ApiService _apiService;
 
   List<Asset> _assets = [];
+  List<Asset> _userAssets = [];
   bool _isLoading = false;
-  String? _error;
+  String? _error = null;
   String _searchQuery = '';
   String? _statusFilter;
   String? _categoryFilter;
@@ -18,6 +19,7 @@ class AssetProvider extends ChangeNotifier {
   AssetProvider(this._apiService);
 
   List<Asset> get assets => _assets;
+  List<Asset> get userAssets => _userAssets;
   bool get isLoading => _isLoading;
   String? get error => _error;
   String get searchQuery => _searchQuery;
@@ -70,6 +72,8 @@ class AssetProvider extends ChangeNotifier {
       _assets.where((a) => a.statusName.toLowerCase() == 'assigned').length;
   int get maintenanceCount =>
       _assets.where((a) => a.statusName.toLowerCase() == 'maintenance').length;
+  int get decommissionedCount =>
+      _assets.where((a) => a.statusName.toLowerCase() == 'decommissioned').length;
 
   Map<String, int> get categoryBreakdown {
     final map = <String, int>{};
@@ -94,6 +98,22 @@ class AssetProvider extends ChangeNotifier {
 
     try {
       _assets = await _apiService.getAssets();
+      _isLoading = false;
+      notifyListeners();
+    } on ApiException catch (e) {
+      _error = e.message;
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadUserAssets(String userId) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _userAssets = await _apiService.getAssets(assignedToUserId: userId);
       _isLoading = false;
       notifyListeners();
     } on ApiException catch (e) {
@@ -130,6 +150,36 @@ class AssetProvider extends ChangeNotifier {
   Future<void> updateAsset(Asset asset) async {
     try {
       final updated = await _apiService.updateAsset(asset);
+      final index = _assets.indexWhere((a) => a.id == asset.id);
+      if (index >= 0) {
+        _assets[index] = updated;
+        notifyListeners();
+      }
+    } on ApiException catch (e) {
+      _error = e.message;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> decommissionAsset({
+    required Asset asset,
+    required String method,
+    required String recycler,
+    required String cert,
+  }) async {
+    try {
+      final decommissioningAsset = asset.copyWith(
+        statusId: 'stat_5', // Decommissioned status ID
+        statusName: 'Decommissioned',
+        decommissionedAt: DateTime.now(),
+        decommissionMethod: method,
+        recyclerName: recycler,
+        certificateNumber: cert,
+        assignedTo: '', // Unassign on decommission
+      );
+
+      final updated = await _apiService.updateAsset(decommissioningAsset);
       final index = _assets.indexWhere((a) => a.id == asset.id);
       if (index >= 0) {
         _assets[index] = updated;

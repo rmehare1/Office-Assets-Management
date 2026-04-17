@@ -446,7 +446,25 @@ class _CreateTicketSheetState extends State<_CreateTicketSheet> {
     }
   }
 
+  List<Asset> _getFilteredAssets(String userId) {
+    if (_type == 'return_asset') {
+      return _availableAssets.where((a) => a.assignedTo == userId).toList();
+    }
+    return _availableAssets;
+  }
+
   Future<void> _submit() async {
+    if (_type == 'return_asset' && _selectedAssetId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select an asset to return'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppTheme.dangerColor,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
     final provider = context.read<TicketProvider>();
 
@@ -568,8 +586,10 @@ class _CreateTicketSheetState extends State<_CreateTicketSheet> {
                     prefixIcon: Icon(Icons.inventory_2_outlined),
                   ),
                   items: [
-                    const DropdownMenuItem(value: null, child: Text('None')),
-                    ..._availableAssets.map(
+                    if (_type != 'return_asset')
+                      const DropdownMenuItem(value: null, child: Text('None')),
+                    ..._getFilteredAssets(context.read<AuthProvider>().currentUser?.id ?? '')
+                        .map(
                       (asset) => DropdownMenuItem(
                         value: asset.id,
                         child: Text(
@@ -582,6 +602,17 @@ class _CreateTicketSheetState extends State<_CreateTicketSheet> {
                   onChanged: (value) =>
                       setState(() => _selectedAssetId = value),
                 ),
+          if (_type == 'return_asset' &&
+              !_loadingAssets &&
+              _getFilteredAssets(context.read<AuthProvider>().currentUser?.id ?? '')
+                  .isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'You have no assets assigned to return.',
+                style: textTheme.bodySmall?.copyWith(color: AppTheme.dangerColor),
+              ),
+            ),
           const SizedBox(height: 16),
 
           // Notes

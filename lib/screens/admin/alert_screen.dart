@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:office_assets_app/providers/alert_provider.dart';
 import 'package:office_assets_app/theme/app_theme.dart';
 import 'package:office_assets_app/models/maintenance_alert.dart';
+import 'package:office_assets_app/utils/app_strings.dart';
 
 class AlertScreen extends StatefulWidget {
   const AlertScreen({super.key});
@@ -63,7 +64,7 @@ class _AlertScreenState extends State<AlertScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Maintenance Alerts'),
+        title: const Text(AppStrings.maintenanceAlerts),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -85,7 +86,7 @@ class _AlertScreenState extends State<AlertScreen> {
               ),
             )
           : alerts.isEmpty
-          ? const Center(child: Text('No maintenance alerts found.'))
+          ? const Center(child: Text(AppStrings.noMaintenanceAlerts))
           : ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: alerts.length,
@@ -136,15 +137,15 @@ class _AlertScreenState extends State<AlertScreen> {
                             itemBuilder: (context) => [
                               const PopupMenuItem(
                                 value: 'view',
-                                child: Text('View Asset'),
+                                child: Text(AppStrings.viewAsset),
                               ),
                               const PopupMenuItem(
                                 value: 'Completed',
-                                child: Text('Mark Completed'),
+                                child: Text(AppStrings.markCompleted),
                               ),
                               const PopupMenuItem(
                                 value: 'Dismissed',
-                                child: Text('Dismiss'),
+                                child: Text(AppStrings.dismiss),
                               ),
                             ],
                           )

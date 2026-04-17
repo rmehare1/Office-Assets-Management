@@ -20,6 +20,10 @@ class Asset {
   final String? notes;
   final String? barcodeValue;
   final DateTime? lastServiceDate;
+  final DateTime? decommissionedAt;
+  final String? decommissionMethod;
+  final String? recyclerName;
+  final String? certificateNumber;
 
   const Asset({
     required this.id,
@@ -41,6 +45,10 @@ class Asset {
     this.notes,
     this.barcodeValue,
     this.lastServiceDate,
+    this.decommissionedAt,
+    this.decommissionMethod,
+    this.recyclerName,
+    this.certificateNumber,
   });
 
   factory Asset.fromJson(Map<String, dynamic> json) {
@@ -64,6 +72,10 @@ class Asset {
       notes: json['notes'] as String?,
       barcodeValue: json['barcode_value'] as String?,
       lastServiceDate: json['last_service_date'] != null ? DateTime.parse(json['last_service_date'] as String) : null,
+      decommissionedAt: json['decommissioned_at'] != null ? DateTime.parse(json['decommissioned_at'] as String) : null,
+      decommissionMethod: json['decommission_method'] as String?,
+      recyclerName: json['recycler_name'] as String?,
+      certificateNumber: json['certificate_number'] as String?,
     );
   }
 
@@ -83,6 +95,10 @@ class Asset {
       'notes': notes,
       'barcode_value': barcodeValue,
       'last_service_date': lastServiceDate?.toIso8601String().split('T')[0],
+      'decommissioned_at': decommissionedAt?.toIso8601String(),
+      'decommission_method': decommissionMethod,
+      'recycler_name': recyclerName,
+      'certificate_number': certificateNumber,
     };
   }
 
@@ -137,6 +153,10 @@ class Asset {
     String? notes,
     String? barcodeValue,
     DateTime? lastServiceDate,
+    DateTime? decommissionedAt,
+    String? decommissionMethod,
+    String? recyclerName,
+    String? certificateNumber,
   }) {
     return Asset(
       id: id ?? this.id,
@@ -158,6 +178,10 @@ class Asset {
       notes: notes ?? this.notes,
       barcodeValue: barcodeValue ?? this.barcodeValue,
       lastServiceDate: lastServiceDate ?? this.lastServiceDate,
+      decommissionedAt: decommissionedAt ?? this.decommissionedAt,
+      decommissionMethod: decommissionMethod ?? this.decommissionMethod,
+      recyclerName: recyclerName ?? this.recyclerName,
+      certificateNumber: certificateNumber ?? this.certificateNumber,
     );
   }
 

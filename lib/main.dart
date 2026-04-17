@@ -15,6 +15,7 @@ import 'providers/ticket_provider.dart';
 import 'providers/alert_provider.dart';
 import 'package:office_assets_app/router/app_router.dart';
 import 'package:office_assets_app/screens/shared/splash_screen.dart';
+import 'package:office_assets_app/utils/app_strings.dart';
 
 void main() {
   final apiService = ApiService();
@@ -69,7 +70,7 @@ class _OfficeAssetsAppState extends State<OfficeAssetsApp> {
 
     if (_showSplash) {
       return MaterialApp(
-        title: 'Office Assets',
+        title: AppStrings.appName,
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
@@ -79,7 +80,7 @@ class _OfficeAssetsAppState extends State<OfficeAssetsApp> {
     }
 
     return MaterialApp.router(
-      title: 'Office Assets',
+      title: AppStrings.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,

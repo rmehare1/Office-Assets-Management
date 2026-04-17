@@ -9,6 +9,8 @@ import 'package:office_assets_app/providers/auth_provider.dart';
 import 'package:office_assets_app/providers/alert_provider.dart';
 import 'package:office_assets_app/theme/app_theme.dart';
 import 'package:office_assets_app/widgets/status_badge.dart';
+import 'package:office_assets_app/utils/app_strings.dart';
+import 'package:office_assets_app/models/asset_log.dart';
 
 class AssetDetailScreen extends StatefulWidget {
   final String assetId;
@@ -22,13 +24,19 @@ class AssetDetailScreen extends StatefulWidget {
 class _AssetDetailScreenState extends State<AssetDetailScreen> {
   Asset? _fetchedAsset;
   bool _isFetching = false;
+  List<AssetLog>? _history;
+  bool _isFetchingHistory = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final inProvider = context.read<AssetProvider>().getById(widget.assetId);
-      if (inProvider == null) _fetchFromApi();
+      if (inProvider == null) {
+        _fetchFromApi();
+      } else {
+        _fetchHistory();
+      }
     });
   }
 
@@ -38,13 +46,33 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
       final asset = await context.read<AuthProvider>().apiService.getAsset(
         widget.assetId,
       );
-      if (mounted)
+      if (mounted) {
         setState(() {
           _fetchedAsset = asset;
           _isFetching = false;
         });
+        _fetchHistory();
+      }
     } catch (e) {
       if (mounted) setState(() => _isFetching = false);
+    }
+  }
+
+  Future<void> _fetchHistory() async {
+    setState(() => _isFetchingHistory = true);
+    try {
+      final logs = await context
+          .read<AuthProvider>()
+          .apiService
+          .getAssetHistory(widget.assetId);
+      if (mounted) {
+        setState(() {
+          _history = logs;
+          _isFetchingHistory = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isFetchingHistory = false);
     }
   }
 
@@ -55,17 +83,19 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Asset'),
-        content: Text('Are you sure you want to delete "${asset.name}"?'),
+        title: const Text(AppStrings.deleteAsset),
+        content: Text(
+          AppStrings.deleteConfirm.replaceFirst('{name}', asset.name),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: const Text(AppStrings.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: AppTheme.dangerColor),
-            child: const Text('Delete'),
+            child: const Text(AppStrings.delete),
           ),
         ],
       ),
@@ -75,6 +105,92 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
       await context.read<AssetProvider>().deleteAsset(widget.assetId);
       if (context.mounted) context.go('/assets');
     }
+  }
+
+  Future<void> _showDecommissionDialog(
+    BuildContext context,
+    Asset asset,
+  ) async {
+    final methodController = TextEditingController();
+    final recyclerController = TextEditingController();
+    final certController = TextEditingController();
+    String selectedMethod = AppStrings.recycled;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(AppStrings.decommissionAsset),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                value: selectedMethod,
+                decoration: const InputDecoration(
+                  labelText: AppStrings.decommissionMethod,
+                ),
+                items:
+                    [
+                          AppStrings.recycled,
+                          AppStrings.disposed,
+                          AppStrings.donated,
+                        ]
+                        .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                        .toList(),
+                onChanged: (v) => selectedMethod = v ?? selectedMethod,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: recyclerController,
+                decoration: const InputDecoration(
+                  labelText: AppStrings.recyclerName,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: certController,
+                decoration: const InputDecoration(
+                  labelText: AppStrings.certificateNumber,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(AppStrings.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                await context.read<AssetProvider>().decommissionAsset(
+                  asset: asset,
+                  method: selectedMethod,
+                  recycler: recyclerController.text.trim(),
+                  cert: certController.text.trim(),
+                );
+                if (ctx.mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(AppStrings.decommissionSuccess),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (ctx.mounted) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                }
+              }
+            },
+            child: const Text(AppStrings.decommission),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -87,26 +203,32 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
 
     if (_isFetching) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Asset Details')),
+        appBar: AppBar(title: const Text(AppStrings.assetDetails)),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     if (asset == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Asset Details')),
-        body: const Center(child: Text('Asset not found')),
+        appBar: AppBar(title: const Text(AppStrings.assetDetails)),
+        body: const Center(child: Text(AppStrings.assetNotFound)),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Asset Details'),
+        title: const Text(AppStrings.assetDetails),
         actions: [
-          if (isAdmin)
+          if (isAdmin && asset.statusName != 'Decommissioned')
             IconButton(
               icon: const Icon(Icons.edit_outlined),
               onPressed: () => context.go('/assets/${widget.assetId}/edit'),
+            ),
+          if (isAdmin && asset.statusName != 'Decommissioned')
+            IconButton(
+              icon: const Icon(Icons.recycling_outlined),
+              tooltip: AppStrings.decommission,
+              onPressed: () => _showDecommissionDialog(context, asset),
             ),
           if (isAdmin)
             IconButton(
@@ -157,6 +279,59 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
           ),
           const SizedBox(height: 16),
 
+          if (asset.statusName == 'Decommissioned')
+            Card(
+              color: AppTheme.dangerColor.withValues(alpha: 0.1),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.recycling,
+                          color: AppTheme.dangerColor,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          AppStrings.eWasteManagement,
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.dangerColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _DetailRow(
+                      icon: Icons.calendar_today,
+                      label: AppStrings.decommissionDate,
+                      value: asset.decommissionedAt != null
+                          ? '${asset.decommissionedAt!.month}/${asset.decommissionedAt!.day}/${asset.decommissionedAt!.year}'
+                          : 'N/A',
+                    ),
+                    _DetailRow(
+                      icon: Icons.recycling,
+                      label: AppStrings.decommissionMethod,
+                      value: asset.decommissionMethod ?? 'N/A',
+                    ),
+                    _DetailRow(
+                      icon: Icons.business_outlined,
+                      label: AppStrings.recyclerName,
+                      value: asset.recyclerName ?? 'N/A',
+                    ),
+                    _DetailRow(
+                      icon: Icons.verified_user_outlined,
+                      label: AppStrings.certificateNumber,
+                      value: asset.certificateNumber ?? 'N/A',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (asset.statusName == 'Decommissioned') const SizedBox(height: 16),
+
           Consumer<AlertProvider>(
             builder: (context, alertProvider, child) {
               final activeAlerts = alertProvider.alerts
@@ -190,7 +365,7 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Maintenance Overdue',
+                          AppStrings.maintenanceOverdue,
                           style: textTheme.titleMedium?.copyWith(
                             color: AppTheme.dangerColor,
                             fontWeight: FontWeight.bold,
@@ -216,7 +391,7 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Asset marked as serviced'),
+                                  content: Text(AppStrings.assetServiced),
                                 ),
                               );
                               // Refresh asset to get updated last_service_date
@@ -230,7 +405,7 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
                             }
                           }
                         },
-                        child: const Text('Mark as Serviced'),
+                        child: const Text(AppStrings.markAsServiced),
                       ),
                     ),
                   ],
@@ -246,7 +421,7 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Details',
+                    AppStrings.details,
                     style: textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: colors.onSurface,
@@ -255,34 +430,34 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
                   const SizedBox(height: 16),
                   _DetailRow(
                     icon: Icons.qr_code,
-                    label: 'Serial Number',
+                    label: AppStrings.serialNumber,
                     value: asset.serialNumber,
                   ),
                   _DetailRow(
                     icon: Icons.category_outlined,
-                    label: 'Category',
+                    label: AppStrings.category,
                     value: asset.categoryLabel,
                   ),
                   _DetailRow(
                     icon: Icons.location_on_outlined,
-                    label: 'Location',
+                    label: AppStrings.location,
                     value: asset.locationName,
                   ),
                   _DetailRow(
                     icon: Icons.calendar_today_outlined,
-                    label: 'Purchase Date',
+                    label: AppStrings.purchaseDate,
                     value:
                         '${asset.purchaseDate.month}/${asset.purchaseDate.day}/${asset.purchaseDate.year}',
                   ),
                   _DetailRow(
                     icon: Icons.currency_rupee,
-                    label: 'Purchase Price',
+                    label: AppStrings.purchasePrice,
                     value: '${asset.purchasePrice.toStringAsFixed(2)}',
                   ),
                   if (asset.lastServiceDate != null)
                     _DetailRow(
                       icon: Icons.build_circle_outlined,
-                      label: 'Last Service Date',
+                      label: AppStrings.lastServiceDate,
                       value:
                           '${asset.lastServiceDate!.month}/${asset.lastServiceDate!.day}/${asset.lastServiceDate!.year}',
                     ),
@@ -300,7 +475,7 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Assignment',
+                      AppStrings.assignment,
                       style: textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: colors.onSurface,
@@ -339,7 +514,7 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Notes',
+                      AppStrings.notes,
                       style: textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: colors.onSurface,
@@ -375,7 +550,7 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Asset QR Label',
+                          AppStrings.assetQrLabel,
                           style: textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: colors.onSurface,
@@ -452,6 +627,55 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
             ),
           if (isAdmin) const SizedBox(height: 16),
 
+          // Audit History Section
+          if (isAdmin)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Audit History',
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: colors.onSurface,
+                          ),
+                        ),
+                        if (_isFetchingHistory)
+                          const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        else
+                          IconButton(
+                            icon: const Icon(Icons.refresh, size: 18),
+                            onPressed: _fetchHistory,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    if (_history == null && _isFetchingHistory)
+                      const Center(child: Text('Loading history...'))
+                    else if (_history == null || _history!.isEmpty)
+                      const Text(
+                        'No history records found.',
+                        style: TextStyle(fontStyle: FontStyle.italic),
+                      )
+                    else
+                      ..._history!.map((log) => _AuditLogItem(log: log)),
+                  ],
+                ),
+              ),
+            ),
+          if (isAdmin) const SizedBox(height: 32),
+
           // OutlinedButton.icon(
           //   onPressed: () {
           //     ScaffoldMessenger.of(context).showSnackBar(
@@ -522,6 +746,166 @@ class _DetailRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AuditLogItem extends StatelessWidget {
+  final AssetLog log;
+
+  const _AuditLogItem({required this.log});
+
+  String _formatDate(DateTime dt) {
+    return '${dt.month}/${dt.day}/${dt.year} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).colorScheme;
+
+    IconData icon;
+    Color color;
+
+    switch (log.action.toLowerCase()) {
+      case 'created':
+        icon = Icons.add_circle_outline;
+        color = Colors.green;
+        break;
+      case 'updated':
+        icon = Icons.edit_note;
+        color = Colors.blue;
+        break;
+      case 'decommissioned':
+        icon = Icons.recycling;
+        color = AppTheme.dangerColor;
+        break;
+      case 'assigned':
+        icon = Icons.person_add_alt_1_outlined;
+        color = Colors.orange;
+        break;
+      case 'deleted':
+        icon = Icons.delete_outline;
+        color = AppTheme.dangerColor;
+        break;
+      default:
+        icon = Icons.history;
+        color = colors.onSurfaceVariant;
+    }
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 4),
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 14, color: color),
+              ),
+              Expanded(
+                child: Container(
+                  width: 1,
+                  color: colors.outlineVariant,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        log.action,
+                        style: textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                        ),
+                      ),
+                      Text(
+                        _formatDate(log.createdAt),
+                        style: textTheme.labelSmall?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'by ${log.userName}',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colors.onSurfaceVariant,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                  if (log.details != null) ...[
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: colors.surfaceContainerHighest.withValues(
+                          alpha: 0.5,
+                        ),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: _buildDetails(context, log.details!),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetails(BuildContext context, Map<String, dynamic> details) {
+    final textTheme = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: details.entries.map((e) {
+        String from = e.value['from']?.toString() ?? 'N/A';
+        String to = e.value['to']?.toString() ?? 'N/A';
+
+        // Shorten long strings
+        if (from.length > 30) from = '${from.substring(0, 27)}...';
+        if (to.length > 30) to = '${to.substring(0, 27)}...';
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 2),
+          child: RichText(
+            text: TextSpan(
+              style: textTheme.bodySmall?.copyWith(fontSize: 11),
+              children: [
+                TextSpan(
+                  text: '${e.key}: ',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(
+                  text: '$from → ',
+                  style: const TextStyle(color: Colors.grey),
+                ),
+                TextSpan(
+                  text: to,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }

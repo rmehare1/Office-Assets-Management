@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:office_assets_app/utils/app_strings.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:office_assets_app/models/asset.dart';
@@ -176,7 +177,9 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isEditing ? 'Edit Asset' : 'Add Asset'),
+        title: Text(
+          widget.isEditing ? AppStrings.editAsset : AppStrings.addAsset,
+        ),
       ),
       body: (catProvider.isLoading || statProvider.isLoading)
           ? const Center(child: CircularProgressIndicator())
@@ -188,33 +191,35 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
                   TextFormField(
                     controller: _nameController,
                     decoration: const InputDecoration(
-                      labelText: 'Name',
+                      labelText: AppStrings.name,
                       prefixIcon: Icon(Icons.label_outlined),
                     ),
-                    validator: (v) =>
-                        v == null || v.trim().isEmpty ? 'Required' : null,
+                    validator: (v) => v == null || v.trim().isEmpty
+                        ? AppStrings.required
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _serialController,
                     decoration: const InputDecoration(
-                      labelText: 'Serial Number',
+                      labelText: AppStrings.serialNumber,
                       prefixIcon: Icon(Icons.qr_code),
                     ),
-                    validator: (v) =>
-                        v == null || v.trim().isEmpty ? 'Required' : null,
+                    validator: (v) => v == null || v.trim().isEmpty
+                        ? AppStrings.required
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
                     initialValue: _categoryId,
                     decoration: const InputDecoration(
-                      labelText: 'Category',
+                      labelText: AppStrings.category,
                       prefixIcon: Icon(Icons.category_outlined),
                     ),
                     items: catProvider.categories.map((c) {
                       return DropdownMenuItem(value: c.id, child: Text(c.name));
                     }).toList(),
-                    validator: (v) => v == null ? 'Required' : null,
+                    validator: (v) => v == null ? AppStrings.required : null,
                     onChanged: (v) {
                       if (v == null) return;
                       setState(() {
@@ -229,13 +234,13 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
                   DropdownButtonFormField<String>(
                     initialValue: _statusId,
                     decoration: const InputDecoration(
-                      labelText: 'Status',
+                      labelText: AppStrings.status,
                       prefixIcon: Icon(Icons.info_outlined),
                     ),
                     items: statProvider.statuses.map((s) {
                       return DropdownMenuItem(value: s.id, child: Text(s.name));
                     }).toList(),
-                    validator: (v) => v == null ? 'Required' : null,
+                    validator: (v) => v == null ? AppStrings.required : null,
                     onChanged: (v) {
                       if (v == null) return;
                       setState(() {
@@ -257,7 +262,7 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
                         return DropdownButtonFormField<String>(
                           initialValue: _assignedToUserId,
                           decoration: const InputDecoration(
-                            labelText: 'Assign To',
+                            labelText: AppStrings.assignTo,
                             prefixIcon: Icon(Icons.person_outlined),
                           ),
                           items: users.map((user) {
@@ -272,7 +277,7 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
                           validator: (v) {
                             if (_statusName?.toLowerCase() == 'assigned' &&
                                 (v == null || v.isEmpty)) {
-                              return 'Please select a user';
+                              return AppStrings.selectUser;
                             }
                             return null;
                           },
@@ -286,18 +291,19 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
                   TextFormField(
                     controller: _locationController,
                     decoration: const InputDecoration(
-                      labelText: 'Location',
+                      labelText: AppStrings.location,
                       prefixIcon: Icon(Icons.location_on_outlined),
                     ),
-                    validator: (v) =>
-                        v == null || v.trim().isEmpty ? 'Required' : null,
+                    validator: (v) => v == null || v.trim().isEmpty
+                        ? AppStrings.required
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   InkWell(
                     onTap: _pickDate,
                     child: InputDecorator(
                       decoration: const InputDecoration(
-                        labelText: 'Purchase Date',
+                        labelText: AppStrings.purchaseDate,
                         prefixIcon: Icon(Icons.calendar_today_outlined),
                       ),
                       child: Text(
@@ -312,16 +318,17 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
                   TextFormField(
                     controller: _priceController,
                     decoration: const InputDecoration(
-                      labelText: 'Purchase Price',
+                      labelText: AppStrings.purchasePrice,
                       prefixIcon: Icon(Icons.currency_rupee),
                     ),
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) return 'Required';
+                      if (v == null || v.trim().isEmpty)
+                        return AppStrings.required;
                       final n = double.tryParse(v.trim());
-                      if (n == null || n < 0) return 'Enter a valid price';
+                      if (n == null || n < 0) return AppStrings.enterValidPrice;
                       return null;
                     },
                   ),
@@ -329,7 +336,7 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
                   TextFormField(
                     controller: _notesController,
                     decoration: const InputDecoration(
-                      labelText: 'Notes',
+                      labelText: AppStrings.notes,
                       prefixIcon: Icon(Icons.notes),
                     ),
                     maxLines: 3,
@@ -350,8 +357,8 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
                             )
                           : Text(
                               widget.isEditing
-                                  ? 'Save Changes'
-                                  : 'Create Asset',
+                                  ? AppStrings.saveChanges
+                                  : AppStrings.createAsset,
                             ),
                     ),
                   ),

@@ -8,6 +8,8 @@ import 'package:office_assets_app/providers/status_provider.dart';
 import 'package:office_assets_app/providers/location_provider.dart';
 import 'package:office_assets_app/providers/user_provider.dart';
 import 'package:office_assets_app/services/api_exception.dart';
+import 'package:office_assets_app/utils/app_functions.dart';
+import 'package:office_assets_app/utils/app_strings.dart';
 
 class AssetFormScreen extends StatefulWidget {
   final String? assetId;
@@ -33,6 +35,7 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
   String? _statusId;
   String? _statusName;
   String? _assignedToUserId;
+  String? _initialAssignedToUserId;
   String? _locationId;
   String? _locationName;
   DateTime _purchaseDate = DateTime.now();
@@ -65,6 +68,7 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
       _locationName = asset.locationName.isNotEmpty ? asset.locationName : null;
       if (asset.assignedTo.isNotEmpty) {
         _assignedToUserId = asset.assignedTo;
+        _initialAssignedToUserId = asset.assignedTo;
       }
     }
 
@@ -126,7 +130,9 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
     if (scanned['category'] != null && _categoryId == null) {
       final cats = context.read<CategoryProvider>().categories;
       final match = cats.where(
-        (c) => c.name.toLowerCase() == scanned['category'].toString().toLowerCase(),
+        (c) =>
+            c.name.toLowerCase() ==
+            scanned['category'].toString().toLowerCase(),
       );
       if (match.isNotEmpty) {
         setState(() {
@@ -140,7 +146,8 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
     if (scanned['status'] != null && _statusId == null) {
       final stats = context.read<StatusProvider>().statuses;
       final match = stats.where(
-        (s) => s.name.toLowerCase() == scanned['status'].toString().toLowerCase(),
+        (s) =>
+            s.name.toLowerCase() == scanned['status'].toString().toLowerCase(),
       );
       if (match.isNotEmpty) {
         setState(() {
@@ -154,7 +161,9 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
     if (scanned['location'] != null && _locationId == null) {
       final locs = context.read<LocationProvider>().locations;
       final match = locs.where(
-        (l) => l.name.toLowerCase() == scanned['location'].toString().toLowerCase(),
+        (l) =>
+            l.name.toLowerCase() ==
+            scanned['location'].toString().toLowerCase(),
       );
       if (match.isNotEmpty) {
         setState(() {
@@ -193,7 +202,9 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_categoryId == null || _statusId == null || _locationId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select category, status, and location')),
+        const SnackBar(
+          content: Text('Please select category, status, and location'),
+        ),
       );
       return;
     }
@@ -215,7 +226,9 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
       purchaseDate: _purchaseDate,
       purchasePrice: double.parse(_priceController.text.trim()),
       lastServiceDate: _lastServiceDate,
-      notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+      notes: _notesController.text.trim().isEmpty
+          ? null
+          : _notesController.text.trim(),
     );
 
     try {
@@ -225,13 +238,54 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
       } else {
         await provider.addAsset(asset);
       }
+
+      // Send email notification if a new user is assigned
+      if (_assignedToUserId != null &&
+          _assignedToUserId != _initialAssignedToUserId) {
+        _sendAssignmentEmail(asset);
+      }
+
       if (mounted) context.pop();
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  Future<void> _sendAssignmentEmail(Asset asset) async {
+    try {
+      final userProvider = context.read<UserProvider>();
+      // Use maybeFirstWhere if possible or simple error handling
+      final user = userProvider.users.firstWhere(
+        (u) => u.id == _assignedToUserId,
+      );
+
+      final subject = 'New Asset Assigned: ${asset.name}';
+      final body = '''
+Hi ${user.name},
+
+A new asset has been assigned to you.
+
+Asset Details:
+- Name: ${asset.name}
+- Serial Number: ${asset.serialNumber}
+- Category: ${asset.categoryName}
+- Location: ${asset.locationName}
+
+You can view this asset in your "My Assets" section in the app.
+
+Best regards,
+Office Assets Team
+''';
+
+      await sendEmail(user.email, subject, body);
+    } catch (e) {
+      debugPrint('Failed to send assignment email: $e');
     }
   }
 
@@ -246,215 +300,235 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isEditing ? 'Edit Asset' : 'Add Asset'),
-      ),
-      body: (catProvider.isLoading || statProvider.isLoading || locProvider.isLoading || context.watch<UserProvider>().isLoading)
-      ? const Center(child: CircularProgressIndicator()) 
-      : Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Name',
-                prefixIcon: Icon(Icons.label_outlined),
-              ),
-              validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _serialController,
-              decoration: InputDecoration(
-                labelText: 'Serial Number',
-                prefixIcon: const Icon(Icons.qr_code),
-                suffixIcon: widget.isEditing
-                    ? null
-                    : IconButton(
-                        icon: const Icon(Icons.qr_code_scanner_rounded),
-                        tooltip: 'Scan QR/Barcode',
-                        onPressed: () => context.go('/scanner'),
-                      ),
-              ),
-              validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: _categoryId,
-              decoration: const InputDecoration(
-                labelText: 'Category',
-                prefixIcon: Icon(Icons.category_outlined),
-              ),
-              items: catProvider.categories.map((c) {
-                return DropdownMenuItem(
-                  value: c.id,
-                  child: Text(c.name),
-                );
-              }).toList(),
-              validator: (v) => v == null ? 'Required' : null,
-              onChanged: (v) {
-                if (v == null) return;
-                setState(() {
-                  _categoryId = v;
-                  _categoryName = catProvider.categories.firstWhere((c) => c.id == v).name;
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: _statusId,
-              decoration: const InputDecoration(
-                labelText: 'Status',
-                prefixIcon: Icon(Icons.info_outlined),
-              ),
-              items: statProvider.statuses.map((s) {
-                return DropdownMenuItem(
-                  value: s.id,
-                  child: Text(s.name),
-                );
-              }).toList(),
-              validator: (v) => v == null ? 'Required' : null,
-              onChanged: (v) {
-                if (v == null) return;
-                setState(() {
-                  _statusId = v;
-                  _statusName = statProvider.statuses.firstWhere((s) => s.id == v).name;
-                  if (_statusName?.toLowerCase() != 'assigned') {
-                    _assignedToUserId = null;
-                  }
-                });
-              },
-            ),
-            if (_statusName?.toLowerCase() == 'assigned') ...[
-              const SizedBox(height: 16),
-              Consumer<UserProvider>(
-                builder: (context, userProvider, _) {
-                  final users = userProvider.users;
-                  return DropdownButtonFormField<String>(
-                    initialValue: _assignedToUserId,
-                    decoration: const InputDecoration(
-                      labelText: 'Assign To',
-                      prefixIcon: Icon(Icons.person_outlined),
-                    ),
-                    items: users.map((user) {
-                      return DropdownMenuItem<String>(
-                        value: user.id,
-                        child: Text(
-                          '${user.name} (${user.department})',
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      );
-                    }).toList(),
-                    validator: (v) {
-                      if (_statusName?.toLowerCase() == 'assigned' && (v == null || v.isEmpty)) {
-                        return 'Please select a user';
-                      }
-                      return null;
-                    },
-                    onChanged: (v) => setState(() => _assignedToUserId = v),
-                  );
-                },
-              ),
-            ],
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: _locationId,
-              decoration: const InputDecoration(
-                labelText: 'Location',
-                prefixIcon: Icon(Icons.location_on_outlined),
-              ),
-              items: locProvider.locations.map((l) {
-                return DropdownMenuItem(
-                  value: l.id,
-                  child: Text(l.name),
-                );
-              }).toList(),
-              validator: (v) => v == null ? 'Required' : null,
-              onChanged: (v) {
-                if (v == null) return;
-                setState(() {
-                  _locationId = v;
-                  _locationName = locProvider.locations.firstWhere((l) => l.id == v).name;
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            InkWell(
-              onTap: _pickDate,
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Purchase Date',
-                  prefixIcon: Icon(Icons.calendar_today_outlined),
-                ),
-                child: Text(
-                  '${_purchaseDate.month}/${_purchaseDate.day}/${_purchaseDate.year}',
-                  style: textTheme.bodyLarge?.copyWith(color: colors.onSurface),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            InkWell(
-              onTap: _pickServiceDate,
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Last Service Date (Optional)',
-                  prefixIcon: Icon(Icons.build_circle_outlined),
-                ),
-                child: Text(
-                  _lastServiceDate != null 
-                      ? '${_lastServiceDate!.month}/${_lastServiceDate!.day}/${_lastServiceDate!.year}'
-                      : 'Not serviced yet',
-                  style: textTheme.bodyLarge?.copyWith(
-                    color: _lastServiceDate != null ? colors.onSurface : colors.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _priceController,
-              decoration: const InputDecoration(
-                labelText: 'Purchase Price',
-                prefixIcon: Icon(Icons.currency_rupee),
-              ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Required';
-                final n = double.tryParse(v.trim());
-                if (n == null || n < 0) return 'Enter a valid price';
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _notesController,
-              decoration: const InputDecoration(
-                labelText: 'Notes',
-                prefixIcon: Icon(Icons.notes),
-              ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _isSubmitting ? null : _submit,
-                child: _isSubmitting
-                    ? SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          color: colors.onPrimary,
-                          strokeWidth: 2.5,
-                        ),
-                      )
-                    : Text(widget.isEditing ? 'Save Changes' : 'Create Asset'),
-              ),
-            ),
-          ],
+        title: Text(
+          widget.isEditing ? AppStrings.editAsset : AppStrings.addAsset,
         ),
       ),
+      body:
+          (catProvider.isLoading ||
+              statProvider.isLoading ||
+              locProvider.isLoading ||
+              context.watch<UserProvider>().isLoading)
+          ? const Center(child: CircularProgressIndicator())
+          : Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      labelText: AppStrings.name,
+                      prefixIcon: Icon(Icons.label_outlined),
+                    ),
+                    validator: (v) => v == null || v.trim().isEmpty
+                        ? AppStrings.required
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _serialController,
+                    decoration: InputDecoration(
+                      labelText: AppStrings.serialNumber,
+                      prefixIcon: const Icon(Icons.qr_code),
+                      suffixIcon: widget.isEditing
+                          ? null
+                          : IconButton(
+                              icon: const Icon(Icons.qr_code_scanner_rounded),
+                              tooltip: 'Scan QR/Barcode',
+                              onPressed: () => context.go('/scanner'),
+                            ),
+                    ),
+                    validator: (v) => v == null || v.trim().isEmpty
+                        ? AppStrings.required
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    initialValue: _categoryId,
+                    decoration: const InputDecoration(
+                      labelText: AppStrings.category,
+                      prefixIcon: Icon(Icons.category_outlined),
+                    ),
+                    items: catProvider.categories.map((c) {
+                      return DropdownMenuItem(value: c.id, child: Text(c.name));
+                    }).toList(),
+                    validator: (v) => v == null ? AppStrings.required : null,
+                    onChanged: (v) {
+                      if (v == null) return;
+                      setState(() {
+                        _categoryId = v;
+                        _categoryName = catProvider.categories
+                            .firstWhere((c) => c.id == v)
+                            .name;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    initialValue: _statusId,
+                    decoration: const InputDecoration(
+                      labelText: AppStrings.status,
+                      prefixIcon: Icon(Icons.info_outlined),
+                    ),
+                    items: statProvider.statuses.map((s) {
+                      return DropdownMenuItem(value: s.id, child: Text(s.name));
+                    }).toList(),
+                    validator: (v) => v == null ? AppStrings.required : null,
+                    onChanged: (v) {
+                      if (v == null) return;
+                      setState(() {
+                        _statusId = v;
+                        _statusName = statProvider.statuses
+                            .firstWhere((s) => s.id == v)
+                            .name;
+                        if (_statusName?.toLowerCase() != 'assigned') {
+                          _assignedToUserId = null;
+                        }
+                      });
+                    },
+                  ),
+                  if (_statusName?.toLowerCase() == 'assigned') ...[
+                    const SizedBox(height: 16),
+                    Consumer<UserProvider>(
+                      builder: (context, userProvider, _) {
+                        final users = userProvider.users;
+                        return DropdownButtonFormField<String>(
+                          initialValue: _assignedToUserId,
+                          decoration: const InputDecoration(
+                            labelText: AppStrings.assignTo,
+                            prefixIcon: Icon(Icons.person_outlined),
+                          ),
+                          items: users.map((user) {
+                            return DropdownMenuItem<String>(
+                              value: user.id,
+                              child: Text(
+                                '${user.name} (${user.department})',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }).toList(),
+                          validator: (v) {
+                            if (_statusName?.toLowerCase() == 'assigned' &&
+                                (v == null || v.isEmpty)) {
+                              return AppStrings.selectUser;
+                            }
+                            return null;
+                          },
+                          onChanged: (v) =>
+                              setState(() => _assignedToUserId = v),
+                        );
+                      },
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    initialValue: _locationId,
+                    decoration: const InputDecoration(
+                      labelText: AppStrings.location,
+                      prefixIcon: Icon(Icons.location_on_outlined),
+                    ),
+                    items: locProvider.locations.map((l) {
+                      return DropdownMenuItem(value: l.id, child: Text(l.name));
+                    }).toList(),
+                    validator: (v) => v == null ? AppStrings.required : null,
+                    onChanged: (v) {
+                      if (v == null) return;
+                      setState(() {
+                        _locationId = v;
+                        _locationName = locProvider.locations
+                            .firstWhere((l) => l.id == v)
+                            .name;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  InkWell(
+                    onTap: _pickDate,
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: AppStrings.purchaseDate,
+                        prefixIcon: Icon(Icons.calendar_today_outlined),
+                      ),
+                      child: Text(
+                        '${_purchaseDate.month}/${_purchaseDate.day}/${_purchaseDate.year}',
+                        style: textTheme.bodyLarge?.copyWith(
+                          color: colors.onSurface,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  InkWell(
+                    onTap: _pickServiceDate,
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: AppStrings.lastServiceDate,
+                        prefixIcon: Icon(Icons.build_circle_outlined),
+                      ),
+                      child: Text(
+                        _lastServiceDate != null
+                            ? '${_lastServiceDate!.month}/${_lastServiceDate!.day}/${_lastServiceDate!.year}'
+                            : AppStrings.notServiced,
+                        style: textTheme.bodyLarge?.copyWith(
+                          color: _lastServiceDate != null
+                              ? colors.onSurface
+                              : colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _priceController,
+                    decoration: const InputDecoration(
+                      labelText: 'Purchase Price',
+                      prefixIcon: Icon(Icons.currency_rupee),
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty)
+                        return AppStrings.required;
+                      final n = double.tryParse(v.trim());
+                      if (n == null || n < 0) return AppStrings.enterValidPrice;
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _notesController,
+                    decoration: const InputDecoration(
+                      labelText: AppStrings.notes,
+                      prefixIcon: Icon(Icons.notes),
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: _isSubmitting ? null : _submit,
+                      child: _isSubmitting
+                          ? SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: colors.onPrimary,
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          : Text(
+                              widget.isEditing
+                                  ? AppStrings.saveChanges
+                                  : AppStrings.createAsset,
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
     );
   }
 }

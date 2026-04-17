@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:office_assets_app/providers/asset_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:office_assets_app/models/asset.dart';
 import 'package:office_assets_app/providers/auth_provider.dart';
@@ -14,10 +15,6 @@ class MyAssetsScreen extends StatefulWidget {
 }
 
 class _MyAssetsScreenState extends State<MyAssetsScreen> {
-  List<Asset> _assets = [];
-  bool _isLoading = false;
-  String? _error;
-
   @override
   void initState() {
     super.initState();
@@ -25,26 +22,9 @@ class _MyAssetsScreenState extends State<MyAssetsScreen> {
   }
 
   Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-    try {
-      final userId = context.read<AuthProvider>().currentUser!.id;
-      final assets = await context.read<AuthProvider>().apiService.getAssets(
-        assignedToUserId: userId,
-      );
-      if (mounted)
-        setState(() {
-          _assets = assets;
-          _isLoading = false;
-        });
-    } catch (e) {
-      if (mounted)
-        setState(() {
-          _error = e.toString();
-          _isLoading = false;
-        });
+    final userId = context.read<AuthProvider>().currentUser?.id;
+    if (userId != null) {
+      context.read<AssetProvider>().loadUserAssets(userId);
     }
   }
 
@@ -52,6 +32,8 @@ class _MyAssetsScreenState extends State<MyAssetsScreen> {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
+    final assetProvider = context.watch<AssetProvider>();
+    final assets = assetProvider.userAssets;
 
     return Scaffold(
       appBar: AppBar(
@@ -60,15 +42,15 @@ class _MyAssetsScreenState extends State<MyAssetsScreen> {
           IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
         ],
       ),
-      body: _isLoading
+      body: assetProvider.isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _error != null
+          : assetProvider.error != null
           ? Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Error: $_error',
+                    'Error: ${assetProvider.error}',
                     style: textTheme.bodyMedium?.copyWith(
                       color: AppTheme.dangerColor,
                     ),
@@ -79,7 +61,7 @@ class _MyAssetsScreenState extends State<MyAssetsScreen> {
                 ],
               ),
             )
-          : _assets.isEmpty
+          : assets.isEmpty
           ? Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -103,9 +85,9 @@ class _MyAssetsScreenState extends State<MyAssetsScreen> {
               onRefresh: _load,
               child: ListView.builder(
                 padding: const EdgeInsets.all(16),
-                itemCount: _assets.length,
+                itemCount: assets.length,
                 itemBuilder: (context, index) {
-                  final asset = _assets[index];
+                  final asset = assets[index];
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: AssetCard(

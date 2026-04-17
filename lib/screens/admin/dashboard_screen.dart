@@ -12,6 +12,7 @@ import 'package:office_assets_app/widgets/asset_card.dart';
 import 'package:office_assets_app/widgets/stat_card.dart';
 import 'package:office_assets_app/widgets/staggered_list_item.dart';
 import 'package:office_assets_app/widgets/tutorial_overlay.dart';
+import 'package:office_assets_app/utils/app_strings.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -136,7 +137,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     return Stack(
       children: [
         Scaffold(
-          appBar: AppBar(title: const Text('Dashboard')),
+          appBar: AppBar(title: const Text(AppStrings.dashboard)),
           body:
               (assetProvider.isLoading ||
                   statProvider.isLoading ||
@@ -155,7 +156,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         key: _searchKey,
                         onChanged: assetProvider.setSearchQuery,
                         decoration: InputDecoration(
-                          hintText: 'Search assets...',
+                          hintText: AppStrings.searchAssets,
                           prefixIcon: const Icon(Icons.search),
                           suffixIcon: assetProvider.searchQuery.isNotEmpty
                               ? IconButton(
@@ -182,7 +183,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                             GestureDetector(
                               onTap: () => _navigateWithFilter(context, null),
                               child: StatCard(
-                                title: 'Total Assets',
+                                title: AppStrings.totalAssets,
                                 value: '${assetProvider.totalAssets}',
                                 icon: Icons.inventory_2,
                                 color: colors.primary,
@@ -191,12 +192,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                           ),
                           ...List.generate(
                             statProvider.statuses
-                                .where((s) => s.name.toLowerCase() != 'retired')
+                                .where((s) => !['retired', 'decommissioned'].contains(s.name.toLowerCase()))
                                 .length,
                             (index) {
                               final status = statProvider.statuses
                                   .where(
-                                    (s) => s.name.toLowerCase() != 'retired',
+                                    (s) => !['retired', 'decommissioned'].contains(s.name.toLowerCase()),
                                   )
                                   .toList()[index];
                               final count = assetProvider.assets
@@ -267,14 +268,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          'Scan Asset',
+                                          AppStrings.scanAsset,
                                           style: textTheme.titleMedium
                                               ?.copyWith(
                                                 fontWeight: FontWeight.bold,
                                               ),
                                         ),
                                         Text(
-                                          'Scan QR code or barcode to register or lookup an asset',
+                                          AppStrings.scanDescription,
                                           style: textTheme.bodySmall?.copyWith(
                                             color: colors.onSurfaceVariant,
                                           ),
@@ -325,10 +326,19 @@ class _DashboardScreenState extends State<DashboardScreen>
                           );
                         },
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 12),
+                      if (assetProvider.decommissionedCount > 0)
+                        _RecentEWasteBanner(
+                          count: assetProvider.decommissionedCount,
+                          onTap: () {
+                            assetProvider.setStatusFilter('stat_5');
+                            context.go('/assets');
+                          },
+                        ),
+                      const SizedBox(height: 12),
 
                       Text(
-                        'Categories',
+                        AppStrings.categories,
                         style: textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: colors.onSurface,
@@ -375,7 +385,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Recent Assets',
+                            AppStrings.recentAssets,
                             style: textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: colors.onSurface,
@@ -383,7 +393,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                           ),
                           if (assetProvider.searchQuery.isNotEmpty)
                             Text(
-                              '${assetProvider.filteredAssets.length} results',
+                              '${assetProvider.filteredAssets.length} ${AppStrings.results}',
                               style: textTheme.bodySmall?.copyWith(
                                 color: colors.onSurfaceVariant,
                               ),
@@ -522,13 +532,16 @@ class _RecentTicketsBanner extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Recent Tickets',
+                        AppStrings.pendingTicketAlerts,
                         style: textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
-                        'You have $pendingCount active requests to review',
+                        AppStrings.pendingTicketMsg.replaceFirst(
+                          '{count}',
+                          '$pendingCount',
+                        ),
                         style: textTheme.bodySmall?.copyWith(
                           color: colors.onSurfaceVariant,
                         ),
@@ -557,7 +570,7 @@ class _RecentTicketsBanner extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          'View All',
+                          AppStrings.viewAll,
                           style: textTheme.labelSmall?.copyWith(
                             color: Colors.orange,
                             fontWeight: FontWeight.w600,
@@ -635,13 +648,16 @@ class _RecentAlertsBanner extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Maintenance Alerts',
+                        AppStrings.maintenanceAlerts,
                         style: textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
-                        'You have $count asset(s) overdue for maintenance',
+                        AppStrings.overdueMaintenanceMsg.replaceFirst(
+                          '{count}',
+                          '$count',
+                        ),
                         style: textTheme.bodySmall?.copyWith(
                           color: colors.onSurfaceVariant,
                         ),
@@ -663,7 +679,7 @@ class _RecentAlertsBanner extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          'View',
+                          AppStrings.view,
                           style: textTheme.labelSmall?.copyWith(
                             color: AppTheme.dangerColor,
                             fontWeight: FontWeight.w600,
@@ -678,6 +694,84 @@ class _RecentAlertsBanner extends StatelessWidget {
                     ),
                   ],
                 ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RecentEWasteBanner extends StatelessWidget {
+  final int count;
+  final VoidCallback onTap;
+
+  const _RecentEWasteBanner({required this.count, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).colorScheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [
+            colors.secondary.withValues(alpha: 0.15),
+            colors.secondary.withValues(alpha: 0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(
+          color: colors.secondary.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: colors.secondary.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.recycling_rounded,
+                    color: colors.secondary,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppStrings.eWasteManagement,
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'Track and manage $count decommissioned asset(s)',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded, color: colors.secondary),
               ],
             ),
           ),

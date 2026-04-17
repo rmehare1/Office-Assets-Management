@@ -9,6 +9,7 @@ import 'package:office_assets_app/models/status.dart';
 import 'package:office_assets_app/models/ticket.dart';
 import 'package:office_assets_app/models/user.dart';
 import 'package:office_assets_app/models/maintenance_alert.dart';
+import 'package:office_assets_app/models/asset_log.dart';
 import 'api_config.dart';
 import 'token_storage.dart';
 import 'interceptors/auth_interceptor.dart';
@@ -246,6 +247,17 @@ class ApiService {
       if (e.response?.statusCode == 404) return null;
       rethrow;
     }
+  }
+
+  Future<List<AssetLog>> getAssetHistory(String assetId) async {
+    return _wrap(() async {
+      final response = await _dio.get('/assets/$assetId/history');
+      final data = response.data as Map<String, dynamic>;
+      final list = data['history'] as List;
+      return list
+          .map((j) => AssetLog.fromJson(j as Map<String, dynamic>))
+          .toList();
+    });
   }
 
   // ── Users ───────────────────────────────────────────

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:office_assets_app/providers/asset_provider.dart';
 import 'package:office_assets_app/theme/app_theme.dart';
 import 'package:office_assets_app/widgets/status_badge.dart';
+import 'package:office_assets_app/utils/app_strings.dart';
 
 class AssetDetailScreen extends StatelessWidget {
   final String assetId;
@@ -17,17 +18,19 @@ class AssetDetailScreen extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Asset'),
-        content: Text('Are you sure you want to delete "${asset.name}"?'),
+        title: const Text(AppStrings.deleteAsset),
+        content: Text(
+          AppStrings.deleteConfirm.replaceFirst('{name}', asset.name),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: const Text(AppStrings.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: AppTheme.dangerColor),
-            child: const Text('Delete'),
+            child: const Text(AppStrings.delete),
           ),
         ],
       ),
@@ -47,14 +50,14 @@ class AssetDetailScreen extends StatelessWidget {
 
     if (asset == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Asset Details')),
-        body: const Center(child: Text('Asset not found')),
+        appBar: AppBar(title: const Text(AppStrings.assetDetails)),
+        body: const Center(child: Text(AppStrings.assetNotFound)),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Asset Details'),
+        title: const Text(AppStrings.assetDetails),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined),
@@ -115,7 +118,7 @@ class AssetDetailScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Details',
+                    AppStrings.details,
                     style: textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: colors.onSurface,
@@ -124,35 +127,36 @@ class AssetDetailScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   _DetailRow(
                     icon: Icons.qr_code,
-                    label: 'Serial Number',
+                    label: AppStrings.serialNumber,
                     value: asset.serialNumber,
                   ),
                   _DetailRow(
                     icon: Icons.category_outlined,
-                    label: 'Category',
+                    label: AppStrings.category,
                     value: asset.categoryLabel,
                   ),
                   _DetailRow(
                     icon: Icons.location_on_outlined,
-                    label: 'Location',
+                    label: AppStrings.location,
                     value: asset.locationName,
                   ),
                   _DetailRow(
                     icon: Icons.calendar_today_outlined,
-                    label: 'Purchase Date',
+                    label: AppStrings.purchaseDate,
                     value:
                         '${asset.purchaseDate.month}/${asset.purchaseDate.day}/${asset.purchaseDate.year}',
                   ),
                   _DetailRow(
                     icon: Icons.currency_rupee,
-                    label: 'Purchase Price',
+                    label: AppStrings.purchasePrice,
                     value: asset.purchasePrice.toStringAsFixed(2),
                   ),
                   if (asset.lastServiceDate != null)
                     _DetailRow(
                       icon: Icons.build_circle_outlined,
-                      label: 'Last Service Date',
-                      value: '${asset.lastServiceDate!.month}/${asset.lastServiceDate!.day}/${asset.lastServiceDate!.year}',
+                      label: AppStrings.lastServiceDate,
+                      value:
+                          '${asset.lastServiceDate!.month}/${asset.lastServiceDate!.day}/${asset.lastServiceDate!.year}',
                     ),
                 ],
               ),
@@ -168,7 +172,7 @@ class AssetDetailScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Assignment',
+                      AppStrings.assignment,
                       style: textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: colors.onSurface,
@@ -207,7 +211,7 @@ class AssetDetailScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Notes',
+                      AppStrings.notes,
                       style: textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: colors.onSurface,
@@ -227,25 +231,25 @@ class AssetDetailScreen extends StatelessWidget {
             ),
           const SizedBox(height: 24),
 
-          OutlinedButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Report issue feature coming soon'),
-                ),
-              );
-            },
-            icon: const Icon(Icons.flag_outlined),
-            label: const Text('Report Issue'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppTheme.warningColor,
-              side: const BorderSide(color: AppTheme.warningColor),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
+          // OutlinedButton.icon(
+          //   onPressed: () {
+          //     ScaffoldMessenger.of(context).showSnackBar(
+          //       const SnackBar(
+          //         content: Text('Report issue feature coming soon'),
+          //       ),
+          //     );
+          //   },
+          //   icon: const Icon(Icons.flag_outlined),
+          //   label: const Text(AppStrings.reportIssue),
+          //   style: OutlinedButton.styleFrom(
+          //     foregroundColor: AppTheme.warningColor,
+          //     side: const BorderSide(color: AppTheme.warningColor),
+          //     padding: const EdgeInsets.symmetric(vertical: 16),
+          //     shape: RoundedRectangleBorder(
+          //       borderRadius: BorderRadius.circular(12),
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );

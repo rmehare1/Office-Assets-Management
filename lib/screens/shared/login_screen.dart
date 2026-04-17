@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:office_assets_app/providers/auth_provider.dart';
 import 'package:office_assets_app/widgets/custom_text_field.dart';
+import 'package:office_assets_app/utils/app_strings.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -140,7 +141,7 @@ class _LoginScreenState extends State<LoginScreen>
     if (!success && mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(auth.error ?? 'Login failed')));
+      ).showSnackBar(SnackBar(content: Text(auth.error ?? AppStrings.loginFailed)));
     }
   }
 
@@ -195,7 +196,7 @@ class _LoginScreenState extends State<LoginScreen>
                           child: Opacity(
                             opacity: _titleOpacity.value,
                             child: Text(
-                              'Office Assets',
+                              AppStrings.appName,
                               style: textTheme.headlineMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: colors.onSurface,
@@ -208,7 +209,7 @@ class _LoginScreenState extends State<LoginScreen>
                         Opacity(
                           opacity: _subtitleOpacity.value,
                           child: Text(
-                            'Manage your workplace equipment',
+                            AppStrings.appSubtitle,
                             style: textTheme.bodyLarge?.copyWith(
                               color: colors.onSurfaceVariant,
                             ),
@@ -222,15 +223,15 @@ class _LoginScreenState extends State<LoginScreen>
                             opacity: _emailOpacity.value,
                             child: CustomTextField(
                               controller: _emailController,
-                              label: 'Email',
+                              label: AppStrings.email,
                               prefixIcon: Icons.email_outlined,
                               keyboardType: TextInputType.emailAddress,
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
-                                  return 'Please enter your email';
+                                  return AppStrings.enterEmail;
                                 }
                                 if (!value.contains('@')) {
-                                  return 'Please enter a valid email';
+                                  return AppStrings.validEmail;
                                 }
                                 return null;
                               },
@@ -245,7 +246,7 @@ class _LoginScreenState extends State<LoginScreen>
                             opacity: _passwordOpacity.value,
                             child: CustomTextField(
                               controller: _passwordController,
-                              label: 'Password',
+                              label: AppStrings.password,
                               prefixIcon: Icons.lock_outlined,
                               obscureText: _obscurePassword,
                               suffixIcon: IconButton(
@@ -262,10 +263,10 @@ class _LoginScreenState extends State<LoginScreen>
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
-                                  return 'Please enter your password';
+                                  return AppStrings.enterPassword;
                                 }
                                 if (value.length < 6) {
-                                  return 'Password must be at least 6 characters';
+                                  return AppStrings.passwordLength;
                                 }
                                 return null;
                               },
@@ -279,7 +280,7 @@ class _LoginScreenState extends State<LoginScreen>
                             alignment: Alignment.centerRight,
                             child: TextButton(
                               onPressed: () => context.go('/forgot-password'),
-                              child: const Text('Forgot Password?'),
+                              child: const Text(AppStrings.forgotPassword),
                             ),
                           ),
                         ),
@@ -303,7 +304,7 @@ class _LoginScreenState extends State<LoginScreen>
                                           strokeWidth: 2.5,
                                         ),
                                       )
-                                    : const Text('Sign In'),
+                                    : const Text(AppStrings.signIn),
                               ),
                             ),
                           ),
@@ -315,12 +316,12 @@ class _LoginScreenState extends State<LoginScreen>
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                "Don't have an account?",
+                                AppStrings.dontHaveAccount,
                                 style: textTheme.bodyMedium,
                               ),
                               TextButton(
                                 onPressed: () => context.go('/signup'),
-                                child: const Text('Sign up'),
+                                child: const Text(AppStrings.signUpLink),
                               ),
                             ],
                           ),
